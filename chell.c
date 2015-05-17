@@ -39,7 +39,7 @@ void cd(char *);
 void pwd(char *, size_t);
 int isspace(int);
 void exit(int);
-int parse(char *, char **);
+int parse(char *, char **, size_t);
 void checkEnv();
 void execute(char **);
 void print_prompt(char *, size_t);
@@ -68,7 +68,13 @@ int main(int argc, char const *argv[]) {
 		fgets(input, sizeof(input), stdin);
 
 		/* Get string tokens. */
-		nwords = parse(input, args);
+		nwords = parse(input, args, 32);
+		switch (nwords) {
+		case -1:
+			fprintf(stderr, "chell: Too many arguments.\n");
+		case 0:
+			continue;
+		}
 
 		/* a built-in command "exit" which terminates all remaining processes
 		started from the shell in an orderly manner before exiting the shell
@@ -82,7 +88,7 @@ int main(int argc, char const *argv[]) {
 		} else if (strcmp("checkEnv", args[0]) == 0) {
 			checkEnv();
 		} else if (strcmp("&", args[nwords-1]) == 0) {
-			printf("background!\n");
+			/* Remove the '&'. */
 			args[nwords-1] = NULL;
 			background(args);
 		} else {
@@ -118,12 +124,11 @@ void background(char **args) {
 		sigrelse(SIGCHLD);
 		exit(0);
 	}
-/*	sleep(5);*/
 	kill(pid, SIGCHLD);
 }
 
 /* `ls ` is erroneous. */
-int parse(char *line, char *argv[32]) {
+int parse(char *line, char *argv[32], size_t size) {
 	/* Number of args. */
 	int argc = 0;
 	char **tmp = argv;
@@ -135,6 +140,9 @@ int parse(char *line, char *argv[32]) {
 
 	/* Parse the whole line. */
 	while (*line != '\0') {
+		if (argc > size) {
+			return -1;
+		}
 		/* Replace whitespace with null-byte. */
 		while (*line == ' ' ||
 			   *line == '\n') {
