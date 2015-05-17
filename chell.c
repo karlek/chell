@@ -66,8 +66,8 @@ int main(int argc, char const *argv[]) {
 		/* Get user input. */
 		fgets(input, sizeof(input), stdin);
 
-		nwords = parse(input, args);
-		args[nwords] = NULL;
+		/* Get string tokens. */
+		parse(input, args);
 
 		/* a built-in command "exit" which terminates all remaining processes
 		started from the shell in an orderly manner before exiting the shell
@@ -124,9 +124,11 @@ void background(char **args) {
 	kill(pid, SIGCHLD);
 }
 
-int parse(char *line, char **argv) {
+/* `ls ` is erroneous. */
+int parse(char *line, char *argv[32]) {
 	/* Number of args. */
 	int argc = 0;
+	char **tmp = argv;
 
 	/* Ignore empty strings. */
 	if (strlen(line) == 1) {
@@ -152,6 +154,7 @@ int parse(char *line, char **argv) {
 			line++;
 		}
 	}
+	tmp[argc] = NULL;
 	return argc;
 }
 
