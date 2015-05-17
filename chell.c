@@ -1,11 +1,13 @@
 /* Chell is a homage to the protagonist in the portal games. */
+#include <errno.h>
+#include <signal.h>
 #include <stdio.h>
-#include <string.h>
-#include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <errno.h>
+#include <unistd.h>
 
 #define INP_LEN 256
 #define CMD_LEN 256
@@ -28,6 +30,10 @@
 
 const char * prompt = "%s(^._.^)ﾉ%s %s@%s %s%s%s %s$%s ";
 
+void kill(pid_t, int);
+void sigrelse(int);
+void sighold(int);
+void background(char **);
 int snprintf (char * s, size_t n, const char * format, ...);
 void cd(char *);
 void pwd(char *, size_t);
@@ -47,6 +53,10 @@ int main(int argc, char const *argv[]) {
 
 	/* Working directory. */
 	char wd[256];
+  	struct timeval t0;
+  	struct timeval t1;
+
+	long elapsed;
 
 	memset(wd, 0, 256);
 
@@ -73,8 +83,16 @@ int main(int argc, char const *argv[]) {
 			pwd(wd, sizeof(wd));
 		} else if (strcmp("checkEnv", args[0]) == 0) {
 			checkEnv();
+		} else if (strcmp("&", args[nwords-1]) == 0) {
+			printf("background!\n");
+			args[nwords-1] = NULL;
+			background(args);
 		} else {
+			gettimeofday(&t0, 0);
 			execute(args);
+			gettimeofday(&t1, 0);
+			elapsed = (t1.tv_sec-t0.tv_sec)*1000000 + t1.tv_usec-t0.tv_usec;
+			printf("time: %.3fs\n", (double)elapsed/1000000);
 		}
 
 		/* Zero the strings. */
@@ -83,6 +101,27 @@ int main(int argc, char const *argv[]) {
 		/*free(words);*/
 	}
 	return 0;
+}
+
+void handler(int signum) {
+	int status;
+    fprintf(stderr,"\nJob stopped.\n");
+    wait(&status);
+}
+
+void background(char **args) {
+	pid_t pid;
+
+    if((pid = fork()) == 0) 
+    {
+        signal(SIGCHLD, handler);
+        sighold(SIGCHLD);
+        execute(args);
+        sigrelse(SIGCHLD);
+        exit(0);
+    }
+/*    sleep(5);*/
+    kill(pid, SIGCHLD);
 }
 
 int parse(char *line, char **argv) {
