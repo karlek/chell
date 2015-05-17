@@ -49,7 +49,6 @@ int main(int argc, char const *argv[]) {
 	char input[INP_LEN] = "";
 
 	char *args[32];
-	int nwords;
 
 	/* Working directory. */
 	char wd[256];
@@ -72,9 +71,6 @@ int main(int argc, char const *argv[]) {
 		/* a built-in command "exit" which terminates all remaining processes
 		started from the shell in an orderly manner before exiting the shell
 		itself */
-		if (nwords == 0) {
-			continue;
-		}
 		if (strcmp("exit", args[0]) == 0) {
 			exit(0);
 		} else if (strcmp("cd", args[0]) == 0) {
