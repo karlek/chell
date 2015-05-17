@@ -55,6 +55,8 @@ int main(int argc, char const *argv[]) {
   	struct timeval t0;
   	struct timeval t1;
 
+  	int nwords = 0;
+
 	long elapsed;
 
 	memset(wd, 0, sizeof(256));
@@ -66,7 +68,7 @@ int main(int argc, char const *argv[]) {
 		fgets(input, sizeof(input), stdin);
 
 		/* Get string tokens. */
-		parse(input, args);
+		nwords = parse(input, args);
 
 		/* a built-in command "exit" which terminates all remaining processes
 		started from the shell in an orderly manner before exiting the shell
