@@ -14,12 +14,12 @@
 #define ARG_LEN 256
 
 #define BLACK   "\x1b[90m"
-#define RED     "\x1b[91m"
+#define RED	 "\x1b[91m"
 #define GREEN   "\x1b[92m"
 #define YELLOW  "\x1b[93m"
-#define BLUE    "\x1b[94m"
+#define BLUE	"\x1b[94m"
 #define MAGENTA "\x1b[95m"
-#define CYAN    "\x1b[96m"
+#define CYAN	"\x1b[96m"
 #define RESET   "\x1b[0m"
 
 #define NAME "chell"
@@ -47,8 +47,8 @@ void print_prompt(char *, size_t);
 int main(int argc, char const *argv[]) {
 	/* Whole input string. */
 	char input[INP_LEN] = "";
-	
-	char *args[32]; 
+
+	char *args[32];
 	int nwords;
 
 	/* Working directory. */
@@ -58,7 +58,7 @@ int main(int argc, char const *argv[]) {
 
 	long elapsed;
 
-	memset(wd, 0, 256);
+	memset(wd, 0, sizeof(256));
 
 	while (1) {
 		print_prompt(wd, sizeof(wd));
@@ -71,14 +71,14 @@ int main(int argc, char const *argv[]) {
 
 		/* a built-in command "exit" which terminates all remaining processes
 		started from the shell in an orderly manner before exiting the shell
-		itself */		
+		itself */
 		if (nwords == 0) {
 			continue;
 		}
 		if (strcmp("exit", args[0]) == 0) {
 			exit(0);
 		} else if (strcmp("cd", args[0]) == 0) {
-			cd(args[1]);			
+			cd(args[1]);
 		} else if (strcmp("pwd", args[0]) == 0) {
 			pwd(wd, sizeof(wd));
 		} else if (strcmp("checkEnv", args[0]) == 0) {
@@ -105,45 +105,45 @@ int main(int argc, char const *argv[]) {
 
 void handler(int signum) {
 	int status;
-    fprintf(stderr,"\nJob stopped.\n");
-    wait(&status);
+	fprintf(stderr,"\nJob stopped.\n");
+	wait(&status);
 }
 
 void background(char **args) {
 	pid_t pid;
 
-    if((pid = fork()) == 0) 
-    {
-        signal(SIGCHLD, handler);
-        sighold(SIGCHLD);
-        execute(args);
-        sigrelse(SIGCHLD);
-        exit(0);
-    }
-/*    sleep(5);*/
-    kill(pid, SIGCHLD);
+	if((pid = fork()) == 0)
+	{
+		signal(SIGCHLD, handler);
+		sighold(SIGCHLD);
+		execute(args);
+		sigrelse(SIGCHLD);
+		exit(0);
+	}
+/*	sleep(5);*/
+	kill(pid, SIGCHLD);
 }
 
 int parse(char *line, char **argv) {
 	/* Number of args. */
 	int argc = 0;
 
-	/* Ignore empty strings. */    
+	/* Ignore empty strings. */
 	if (strlen(line) == 1) {
 		return argc;
 	}
 
-    /* Parse the whole line. */ 
-    while (*line != '\0') {
+	/* Parse the whole line. */
+	while (*line != '\0') {
 		/* Replace whitespace with null-byte. */
 		while (*line == ' ' ||
-		       *line == '\n') {
+			   *line == '\n') {
 			argc++;
 			*line++ = '\0';
 		}
 
 		/* Save the argument. */
-		*argv++ = line;          
+		*argv++ = line;
 
 		/* Skip until we need to remove whitespace.  */
 		while (*line != '\0' &&
@@ -151,7 +151,7 @@ int parse(char *line, char **argv) {
 			   *line != '\n') {
 			line++;
 		}
-    }
+	}
 	return argc;
 }
 
@@ -191,21 +191,21 @@ void checkEnv() {
 	char *pager = getenv("PAGER");
 
 	if (pager == NULL) {
-		pager = "lessq";	
+		pager = "lessq";
 	}
-	
+
 	printf("pager: %s\n", pager);
 
 	/* Necessary to check for errors? */
 	snprintf(argument, ARG_LEN, "printenv | sort | %s", pager);
 	printf("arg: %s\n", argument);
-	
+
 	ret = system(argument);
 	printf("ret: %d\n", ret);
 	if (ret != 0) {
 		pager = "more";
 	}
-	
+
 	snprintf(argument, ARG_LEN, "printenv | sort | %s", pager);
 	system(argument);
 }
@@ -215,13 +215,13 @@ void execute(char **argv) {
 	int status;
 
 	/* Fork a child process. */
-    if ((pid = fork()) < 0) {     
+	if ((pid = fork()) < 0) {
 		fprintf(stderr, "*** ERROR: forking child process failed\n");
 		exit(1);
-    } else if (pid == 0) {
-    	/* For the child process. */
+	} else if (pid == 0) {
+		/* For the child process. */
 
-    	/* Execute the command. */   
+		/* Execute the command. */
 		if (execvp(*argv, argv) < 0) {
 			fprintf(stderr, "%s: Unknown command: %s\n", NAME, argv[0]);
 			exit(1);
@@ -229,8 +229,8 @@ void execute(char **argv) {
 	} else {
 		/* For the parent. */
 
-    	/* Wait for completion. */
-    	while (wait(&status) != pid);
+		/* Wait for completion. */
+		while (wait(&status) != pid);
 	}
 }
 
@@ -241,7 +241,11 @@ void print_prompt(char *wd, size_t size) {
 	}
 
 	/* Print prompt. */
-	printf(prompt, YELLOW, RESET, BLACK,
-	RESET, MAGENTA, wd, RESET,
-	BLUE, RESET);
+	printf(
+		prompt,
+		YELLOW, RESET,
+		BLACK,  RESET,
+		MAGENTA, wd, RESET,
+		BLUE, RESET
+	);
 }
