@@ -95,7 +95,7 @@ int main(int argc, char const *argv[]) {
 			background(nwords, args);
 		} else {
 			gettimeofday(&begin, 0);
-			execute(args);
+			execute(args); 
 			gettimeofday(&end, 0);
 			elapsed = (end.tv_sec-begin.tv_sec)*1000000 + end.tv_usec-begin.tv_usec;
 			printf("time: %.3fs\n", (double)elapsed/1000000);
@@ -109,6 +109,7 @@ int main(int argc, char const *argv[]) {
 }
 
 void handler(int signum) {
+	/* Handler for SIGCHLD in background/2 */
 	int status;
 	wait(&status);
 }
@@ -116,10 +117,9 @@ void handler(int signum) {
 void background(int argc, char **argv) {
 	pid_t pid;
 	char command[256] = "";
-	int i;
 
 	/* Create command string. */
-	for (i = 0; i < argc; i++) {
+	for (int i = 0; i < argc; i++) {
 		strcat(command, argv[i]);
 		if (i+1 == argc) {
 			break;
@@ -140,8 +140,10 @@ void background(int argc, char **argv) {
 	kill(pid, SIGCHLD);
 }
 
-/* `ls ` is erroneous. */
 int parse(char *line, char *argv[32], size_t size) {
+	/* Skip leading whitespaces */
+	while(isspace(*line)) line++;
+
 	/* Number of args. */
 	int argc = 0;
 	char **tmp = argv;
@@ -157,11 +159,14 @@ int parse(char *line, char *argv[32], size_t size) {
 			return -1;
 		}
 		/* Replace whitespace with null-byte. */
-		while (*line == ' ' ||
+		if (*line == ' ' ||
 			   *line == '\n') {
 			argc++;
 			*line++ = '\0';
 		}
+
+		/* Skip internal whitespaces */
+		while(isspace(*line)) line++;
 
 		/* Save the argument. */
 		*argv++ = line;
@@ -173,6 +178,8 @@ int parse(char *line, char *argv[32], size_t size) {
 			line++;
 		}
 	}
+	
+	/* Add NULL as last element. */
 	tmp[argc] = NULL;
 	return argc;
 }
