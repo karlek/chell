@@ -138,6 +138,9 @@ void background(int argc, char **argv) {
 
 /* `ls ` is erroneous. */
 int parse(char *line, char *argv[32], size_t size) {
+	/* Remove leading whitespace */
+	while(isspace(*line)) line++;
+
 	/* Number of args. */
 	int argc = 0;
 	char **tmp = argv;
@@ -153,11 +156,14 @@ int parse(char *line, char *argv[32], size_t size) {
 			return -1;
 		}
 		/* Replace whitespace with null-byte. */
-		while (*line == ' ' ||
+		if (*line == ' ' ||
 			   *line == '\n') {
 			argc++;
 			*line++ = '\0';
 		}
+
+		/*Skip internal whitespaces*/
+		while(isspace(*line)) line++;
 
 		/* Save the argument. */
 		*argv++ = line;
