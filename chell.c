@@ -115,14 +115,12 @@ void background(int argc, char **argv) {
 	int i;
 
 	/* Create command string. */
-	for (i = 0; i < argc;) {
+	for (i = 0; i < argc; i++) {
 		strcat(command, argv[i]);
-		i++;
-		if (i != argc) {
-			strcat(command, " ");
-		} else {
+		if (i+1 == argc) {
 			break;
 		}
+		strcat(command, " ");
 	}
 	argv[argc-1] = NULL;
 
