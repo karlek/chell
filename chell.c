@@ -1,4 +1,8 @@
 /* Chell is a homage to the protagonist in the portal games. */
+
+/* Needed for sigrelse, sighold, snprintf and kill. */
+#define _XOPEN_SOURCE 500
+
 #include <errno.h>
 #include <signal.h>
 #include <stdio.h>
@@ -14,7 +18,7 @@
 #define ARG_LEN 256
 
 #define BLACK   "\x1b[90m"
-#define RED	 "\x1b[91m"
+#define RED		"\x1b[91m"
 #define GREEN   "\x1b[92m"
 #define YELLOW  "\x1b[93m"
 #define BLUE	"\x1b[94m"
@@ -30,15 +34,8 @@
 
 const char * prompt = "%s(^._.^)ﾉ%s %s@%s %s%s%s %s$%s ";
 
-void kill(pid_t, int);
-void sigrelse(int);
-void sighold(int);
-void background(char **);
-int snprintf (char * s, size_t n, const char * format, ...);
 void cd(char *);
 void pwd(char *, size_t);
-int isspace(int);
-void exit(int);
 int parse(char *, char **, size_t);
 void checkEnv();
 void execute(char **);
