@@ -214,36 +214,44 @@ void pwd(char *wd, size_t size) {
 	}
 }
 
+void exists(char * command) {
+	/* /dev/null file-descriptor. */
+	int fd;
+
+	/* Command to execute. */
+	char *which_args[] = {"which", "placeholder", NULL};
+
+	/* Which command exists? */
+	which_args[1] = command;
+
+	/* Pipe to /dev/null. */
+	fd = open("/dev/null", O_WRONLY);
+	/* Redirect stdout. */
+	dup2(fd, 1);
+	/* Redirect stderr. */
+	dup2(fd, 2);
+	/* fd no longer needed - dup knows whats up. */
+	close(fd);
+
+	/* Run the command. */
+	if (-1 == execvp(*which_args, which_args)) {
+		exit(1);
+	}
+}
+
 char *get_pager() {
+	/* Pid of the `which less` test. */
 	pid_t pid_less;
+	/* Status of the child process. */
 	int status;
 
-	char *which_args[] = {"which", "placeholder", NULL};
 	char *pager = getenv("PAGER");
 
-	int devNull, dup2Result;
-
 	if (pager == NULL) {
-		pager = "less";
+		pager = "lessq";
 	}
-
-	which_args[1] = pager;
-
 	if ((pid_less = fork()) == 0){
-		devNull = open("/dev/null", O_WRONLY);
-		if(devNull == -1){
-			fprintf(stderr,"Error in open('/dev/null',0)\n");
-			exit(EXIT_FAILURE);
-		}
-		dup2Result = dup2(devNull, STDOUT_FILENO);
-		if(dup2Result == -1) {
-		    fprintf(stderr,"Error in dup2(devNull, STDOUT_FILENO)\n");
-		    exit(EXIT_FAILURE);
-		}
-
-		if (-1 == execvp(*which_args, which_args)) {
-			exit(1);
-		}
+		exists(pager);
 	}
 	while (wait(&status) != pid_less);
 	if (status == 256) {
