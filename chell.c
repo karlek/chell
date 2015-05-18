@@ -3,6 +3,8 @@
 /* Needed for sigrelse, sighold, snprintf and kill. */
 #define _XOPEN_SOURCE 500
 
+#include <fcntl.h>
+#include <sys/wait.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdio.h>
@@ -27,6 +29,9 @@
 #define RESET   "\x1b[0m"
 
 #define NAME "chell"
+
+#define WRITE 1
+#define READ 0
 
 /* The 5 is which color index 0-7; then 0-255m.*/
 /* Hex color codes can be calculated with: COLOR = r*6^2 + g*6 + b) + 16. */
@@ -57,7 +62,7 @@ int main(int argc, char const *argv[]) {
 
 	long elapsed;
 
-	memset(wd, 0, sizeof(256));
+	memset(wd, 0, sizeof(wd));
 
 	while (1) {
 		print_prompt(wd, sizeof(wd));
@@ -84,7 +89,7 @@ int main(int argc, char const *argv[]) {
 		} else if (strcmp("pwd", args[0]) == 0) {
 			pwd(wd, sizeof(wd));
 		} else if (strcmp("checkEnv", args[0]) == 0) {
-			checkEnv();
+			checkEnv(nwords, args);
 		} else if (strcmp("&", args[nwords-1]) == 0) {
 			/* Remove the '&'. */
 			background(nwords, args);
@@ -98,7 +103,6 @@ int main(int argc, char const *argv[]) {
 
 		/* Zero the strings. */
 		memset(input, 0, strlen(input));
-		/*memset(wd, 0, strlen(wd));*/
 		/*free(words);*/
 	}
 	return 0;
@@ -202,30 +206,86 @@ void pwd(char *wd, size_t size) {
 	}
 }
 
-/* Still broken, needs to be implemented with pipe. */
-void checkEnv() {
-	int ret = 0;
-	char argument[ARG_LEN] = "";
+char *get_pager() {
+	pid_t pid_less;
+	int status;
+
+	char *which_args[] = {"which", "placeholder", NULL};
 	char *pager = getenv("PAGER");
 
+	int devNull, dup2Result;
+
 	if (pager == NULL) {
-		pager = "lessq";
+		pager = "less";
 	}
 
-	printf("pager: %s\n", pager);
+	which_args[1] = pager;
 
-	/* Necessary to check for errors? */
-	snprintf(argument, ARG_LEN, "printenv | sort | %s", pager);
-	printf("arg: %s\n", argument);
+	if ((pid_less = fork()) == 0){
+		devNull = open("/dev/null", O_WRONLY);
+		if(devNull == -1){
+			fprintf(stderr,"Error in open('/dev/null',0)\n");
+			exit(EXIT_FAILURE);
+		}
+		dup2Result = dup2(devNull, STDOUT_FILENO);
+		if(dup2Result == -1) {
+		    fprintf(stderr,"Error in dup2(devNull, STDOUT_FILENO)\n");
+		    exit(EXIT_FAILURE);
+		}
 
-	ret = system(argument);
-	printf("ret: %d\n", ret);
-	if (ret != 0) {
+		if (-1 == execvp(*which_args, which_args)) {
+			exit(1);
+		}
+	}
+	while (wait(&status) != pid_less);
+	if (status == 256) {
 		pager = "more";
 	}
+	return pager;
+}
 
-	snprintf(argument, ARG_LEN, "printenv | sort | %s", pager);
-	system(argument);
+/* Still broken, needs to be implemented with pipe. */
+void checkEnv(int argc, char **grep_args) {
+/*	int status;
+	int i;
+*/
+/*	char *printenv_args[] = {"printenv", NULL};
+	char *sort_args[] = {"sort", NULL};
+*/	char *pager_args[] = {"placeholder", NULL};
+
+	/* Piping stuff. */
+	pid_t pidPrintenv, pidSort;
+	int status, pipa[2];
+
+	char *pager = get_pager();
+	pager_args[0] = pager;
+	grep_args[0] = "grep";
+
+	if(-1 == pipe(pipa)) {
+		printf("\n\n\n\n\nerror!\n\n\n\n\n");
+	}
+
+	printf("args: %s\n", grep_args[1]);
+	printf("pager: %s\n", pager);
+
+	if((pidPrintenv = fork()) == 0) {
+		dup2(pipa[WRITE], WRITE);
+		close(pipa[READ]);
+		close(pipa[WRITE]);
+		execlp("printenv", "printenv", NULL);
+	}
+
+	if((pidSort = fork()) == 0)	{
+		dup2(pipa[READ], READ);
+		close(pipa[READ]);
+		close(pipa[WRITE]);
+		execlp("sort", "sort", NULL);
+	}
+
+	close(pipa[WRITE]);
+	close(pipa[READ]);
+	wait(&status);
+	wait(&status);
 }
 
 void execute(char **argv) {
