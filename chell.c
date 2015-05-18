@@ -50,10 +50,10 @@ int main(int argc, char const *argv[]) {
 
 	/* Working directory. */
 	char wd[256];
-  	struct timeval begin;
-  	struct timeval end;
+	struct timeval begin;
+	struct timeval end;
 
-  	int nwords = 0;
+	int nwords = 0;
 
 	long elapsed;
 
