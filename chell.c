@@ -34,6 +34,7 @@
 
 const char * prompt = "%s(^._.^)ﾉ%s %s@%s %s%s%s %s$%s ";
 
+void background(int, char **);
 void cd(char *);
 void pwd(char *, size_t);
 int parse(char *, char **, size_t);
@@ -86,8 +87,7 @@ int main(int argc, char const *argv[]) {
 			checkEnv();
 		} else if (strcmp("&", args[nwords-1]) == 0) {
 			/* Remove the '&'. */
-			args[nwords-1] = NULL;
-			background(args);
+			background(nwords, args);
 		} else {
 			gettimeofday(&t0, 0);
 			execute(args);
@@ -106,18 +106,32 @@ int main(int argc, char const *argv[]) {
 
 void handler(int signum) {
 	int status;
-	fprintf(stderr,"\nJob stopped.\n");
 	wait(&status);
 }
 
-void background(char **args) {
+void background(int argc, char **argv) {
 	pid_t pid;
+	char command[256] = "";
+	int i;
+
+	/* Create command string. */
+	for (i = 0; i < argc;) {
+		strcat(command, argv[i]);
+		i++;
+		if (i != argc) {
+			strcat(command, " ");
+		} else {
+			break;
+		}
+	}
+	argv[argc-1] = NULL;
 
 	if((pid = fork()) == 0)
 	{
 		signal(SIGCHLD, handler);
 		sighold(SIGCHLD);
-		execute(args);
+		execute(argv);
+		fprintf(stdout,"\n“%s” has ended.\n", command);
 		sigrelse(SIGCHLD);
 		exit(0);
 	}
