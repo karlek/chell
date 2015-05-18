@@ -3,6 +3,9 @@
 /* Needed for sigrelse, sighold, snprintf and kill. */
 #define _XOPEN_SOURCE 500
 
+#include <ctype.h>
+#include <fcntl.h>
+#include <sys/wait.h>
 #include <errno.h>
 #include <signal.h>
 #include <stdio.h>
@@ -27,6 +30,9 @@
 #define RESET   "\x1b[0m"
 
 #define NAME "chell"
+
+#define WRITE 1
+#define READ 0
 
 /* The 5 is which color index 0-7; then 0-255m.*/
 /* Hex color codes can be calculated with: COLOR = r*6^2 + g*6 + b) + 16. */
@@ -58,7 +64,7 @@ int main(int argc, char const *argv[]) {
 
 	long elapsed;
 
-	memset(wd, 0, sizeof(256));
+	memset(wd, 0, sizeof(wd));
 
 	while (1) {
 		print_prompt(wd, sizeof(wd));
@@ -85,7 +91,7 @@ int main(int argc, char const *argv[]) {
 		} else if (strcmp("pwd", args[0]) == 0) {
 			pwd(wd, sizeof(wd));
 		} else if (strcmp("checkEnv", args[0]) == 0) {
-			checkEnv();
+			checkEnv(nwords, args);
 		} else if (strcmp("&", args[nwords-1]) == 0) {
 			/* Remove the '&'. */
 			background(nwords, args);
@@ -99,7 +105,6 @@ int main(int argc, char const *argv[]) {
 
 		/* Zero the strings. */
 		memset(input, 0, strlen(input));
-		/*memset(wd, 0, strlen(wd));*/
 		/*free(words);*/
 	}
 	return 0;
@@ -114,9 +119,9 @@ void handler(int signum) {
 void background(int argc, char **argv) {
 	pid_t pid;
 	char command[256] = "";
-
+	int i;
 	/* Create command string. */
-	for (int i = 0; i < argc; i++) {
+	for (i = 0; i < argc; i++) {
 		strcat(command, argv[i]);
 		if (i+1 == argc) {
 			break;
@@ -138,12 +143,12 @@ void background(int argc, char **argv) {
 }
 
 int parse(char *line, char *argv[32], size_t size) {
-	/* Skip leading whitespaces */
-	while(isspace(*line)) line++;
-
 	/* Number of args. */
 	int argc = 0;
 	char **tmp = argv;
+
+	/* Skip leading whitespaces */
+	while(isspace(*line)) line++;
 
 	/* Ignore empty strings. */
 	if (strlen(line) == 1) {
@@ -211,30 +216,182 @@ void pwd(char *wd, size_t size) {
 	}
 }
 
-/* Still broken, needs to be implemented with pipe. */
-void checkEnv() {
-	int ret = 0;
-	char argument[ARG_LEN] = "";
+void exists(char * command) {
+	/* /dev/null file-descriptor. */
+	int fd;
+
+	/* Command to execute. */
+	char *which_args[] = {"which", "placeholder", NULL};
+
+	/* Which command exists? */
+	which_args[1] = command;
+
+	/* Pipe to /dev/null. */
+	fd = open("/dev/null", O_WRONLY);
+
+	/* Redirect stdout. */
+	dup2(fd, 1);
+	/* Redirect stderr. */
+	dup2(fd, 2);
+	/* fd no longer needed - dup knows whats up. */
+	close(fd);
+
+	/* Run the command. */
+	if (-1 == execvp(*which_args, which_args)) {
+		exit(1);
+	}
+}
+
+char *get_pager() {
+	/* Pid of the `which less` test. */
+	pid_t pid_less;
+	/* Status of the child process. */
+	int status;
+
 	char *pager = getenv("PAGER");
 
 	if (pager == NULL) {
-		pager = "lessq";
+		pager = "less";
 	}
-
-	printf("pager: %s\n", pager);
-
-	/* Necessary to check for errors? */
-	snprintf(argument, ARG_LEN, "printenv | sort | %s", pager);
-	printf("arg: %s\n", argument);
-
-	ret = system(argument);
-	printf("ret: %d\n", ret);
-	if (ret != 0) {
+	if ((pid_less = fork()) == 0){
+		exists(pager);
+	}
+	while (wait(&status) != pid_less);
+	if (status == 256) {
 		pager = "more";
 	}
+	return pager;
+}
 
-	snprintf(argument, ARG_LEN, "printenv | sort | %s", pager);
-	system(argument);
+/* Still broken, needs to be implemented with pipe. */
+void checkEnv(int argc, char **grep_args) {
+	/* Commands to run. */
+	char *printenv_args[] = {"printenv", NULL};
+	char *sort_args[] = {"sort", NULL};
+	char *pager_args[] = {"pager", NULL};
+
+	/* Piping stuff. */
+	int status, i;
+
+	int pipes[6];
+	pipe(pipes); /* sets up 1st pipe */
+	pipe(pipes + 2); /* sets up 2nd pipe */
+	pipe(pipes + 4); /* sets up 2nd pipe */
+
+
+	/* we now have 4 fds: */
+	/* pipes[0] = read end of cat->grep pipe (read by grep) */
+	/* pipes[1] = write end of cat->grep pipe (written by cat) */
+	/* pipes[2] = read end of grep->cut pipe (read by cut) */
+	/* pipes[3] = write end of grep->cut pipe (written by grep) */
+
+	/* Note that the code in each if is basically identical, so you */
+	/* could set up a loop to handle it.  The differences are in the */
+	/* indicies into pipes used for the dup2 system call */
+	/* and that the 1st and last only deal with the end of one pipe. */
+
+
+	/* Decide pager program. */
+	pager_args[0] = get_pager();
+	grep_args[0] = "grep";
+
+	/* Create a pipe. */
+	if(-1 == pipe(pipes)) {
+		printf("\n\n\n\n\nerror!\n\n\n\n\n");
+	}
+	if(-1 == pipe(pipes+2)) {
+		printf("\n\n\n\n\nerror!\n\n\n\n\n");
+	}
+
+	printf("args: %s\n", grep_args[1]);
+	printf("pager: %s\n", pager_args[0]);
+
+	if(fork() == 0) {
+		dup2(pipes[1], 1);
+
+		close(pipes[0]);
+		close(pipes[1]);
+		close(pipes[2]);
+		close(pipes[3]);
+		close(pipes[4]);
+		close(pipes[5]);
+
+		execvp(printenv_args[0], printenv_args);
+	}
+
+	if(fork() == 0) {
+		/* Read from stdin. */
+		dup2(pipes[0], 0);
+
+		/* Write to stdout. */
+		dup2(pipes[3], 1);
+
+		close(pipes[0]);
+		close(pipes[1]);
+		close(pipes[2]);
+		close(pipes[3]);
+		close(pipes[4]);
+		close(pipes[5]);
+
+		execvp(sort_args[0], sort_args);
+	}
+
+	if (grep_args[1] != NULL){
+		if(fork() == 0) {
+			/* Stdin. */
+			dup2(pipes[2], 0);
+
+			/* Stdout. */
+			dup2(pipes[5], 1);
+
+			close(pipes[0]);
+			close(pipes[1]);
+			close(pipes[2]);
+			close(pipes[3]);
+			close(pipes[4]);
+			close(pipes[5]);
+
+			execvp(grep_args[0], grep_args);
+		}
+		if(fork() == 0) {
+			/* Stdin. */
+			dup2(pipes[4], 0);
+
+			close(pipes[0]);
+			close(pipes[1]);
+			close(pipes[2]);
+			close(pipes[3]);
+			close(pipes[4]);
+			close(pipes[5]);
+
+			execvp(pager_args[0], pager_args);
+		}
+	} else {
+		if(fork() == 0) {
+			/* Stdin. */
+			dup2(pipes[2], 0);
+
+			close(pipes[0]);
+			close(pipes[1]);
+			close(pipes[2]);
+			close(pipes[3]);
+			close(pipes[4]);
+			close(pipes[5]);
+
+			execvp(pager_args[0], pager_args);
+		}
+	}
+
+	close(pipes[0]);
+	close(pipes[1]);
+	close(pipes[2]);
+	close(pipes[3]);
+	close(pipes[4]);
+	close(pipes[5]);
+
+	for (i = 0; i < 3; i++) {
+		wait(&status);
+	}
 }
 
 void execute(char **argv) {
