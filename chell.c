@@ -34,6 +34,7 @@
 
 const char * prompt = "%s(^._.^)ﾉ%s %s@%s %s%s%s %s$%s ";
 
+/* Tell the compiler that these functions do indeed exist.. */
 void background(int, char **);
 void cd(char *);
 void pwd(char *, size_t);
@@ -174,13 +175,14 @@ int parse(char *line, char *argv[32], size_t size) {
 			line++;
 		}
 	}
-	
+
 	/* Add NULL as last element. */
 	tmp[argc] = NULL;
 	return argc;
 }
 
-/* Doesn't work for ~root */
+/* Is this still true? */
+/* Doesn't work for ~root */ 
 void cd(char * input) {
 	int ret = 0;
 	char path[256] = "";
