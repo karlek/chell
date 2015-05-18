@@ -50,8 +50,8 @@ int main(int argc, char const *argv[]) {
 
 	/* Working directory. */
 	char wd[256];
-  	struct timeval t0;
-  	struct timeval t1;
+  	struct timeval begin;
+  	struct timeval end;
 
   	int nwords = 0;
 
@@ -74,9 +74,9 @@ int main(int argc, char const *argv[]) {
 			continue;
 		}
 
-		/* a built-in command "exit" which terminates all remaining processes
+		/* A built-in command "exit" which terminates all remaining processes
 		started from the shell in an orderly manner before exiting the shell
-		itself */
+		itself. */
 		if (strcmp("exit", args[0]) == 0) {
 			exit(0);
 		} else if (strcmp("cd", args[0]) == 0) {
@@ -89,10 +89,10 @@ int main(int argc, char const *argv[]) {
 			/* Remove the '&'. */
 			background(nwords, args);
 		} else {
-			gettimeofday(&t0, 0);
+			gettimeofday(&begin, 0);
 			execute(args);
-			gettimeofday(&t1, 0);
-			elapsed = (t1.tv_sec-t0.tv_sec)*1000000 + t1.tv_usec-t0.tv_usec;
+			gettimeofday(&end, 0);
+			elapsed = (end.tv_sec-begin.tv_sec)*1000000 + end.tv_usec-begin.tv_usec;
 			printf("time: %.3fs\n", (double)elapsed/1000000);
 		}
 
