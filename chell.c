@@ -3,6 +3,7 @@
 /* Needed for sigrelse, sighold, snprintf and kill. */
 #define _XOPEN_SOURCE 500
 
+#include <ctype.h>
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <errno.h>
@@ -117,9 +118,9 @@ void handler(int signum) {
 void background(int argc, char **argv) {
 	pid_t pid;
 	char command[256] = "";
-
+	int i;
 	/* Create command string. */
-	for (int i = 0; i < argc; i++) {
+	for (i = 0; i < argc; i++) {
 		strcat(command, argv[i]);
 		if (i+1 == argc) {
 			break;
@@ -141,12 +142,12 @@ void background(int argc, char **argv) {
 }
 
 int parse(char *line, char *argv[32], size_t size) {
-	/* Skip leading whitespaces */
-	while(isspace(*line)) line++;
-
 	/* Number of args. */
 	int argc = 0;
 	char **tmp = argv;
+
+	/* Skip leading whitespaces */
+	while(isspace(*line)) line++;
 
 	/* Ignore empty strings. */
 	if (strlen(line) == 1) {
@@ -178,7 +179,7 @@ int parse(char *line, char *argv[32], size_t size) {
 			line++;
 		}
 	}
-	
+
 	/* Add NULL as last element. */
 	tmp[argc] = NULL;
 	return argc;
