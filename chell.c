@@ -226,6 +226,7 @@ void exists(char * command) {
 
 	/* Pipe to /dev/null. */
 	fd = open("/dev/null", O_WRONLY);
+
 	/* Redirect stdout. */
 	dup2(fd, 1);
 	/* Redirect stderr. */
@@ -248,7 +249,7 @@ char *get_pager() {
 	char *pager = getenv("PAGER");
 
 	if (pager == NULL) {
-		pager = "lessq";
+		pager = "less";
 	}
 	if ((pid_less = fork()) == 0){
 		exists(pager);
@@ -262,46 +263,133 @@ char *get_pager() {
 
 /* Still broken, needs to be implemented with pipe. */
 void checkEnv(int argc, char **grep_args) {
-/*	int status;
-	int i;
-*/
-/*	char *printenv_args[] = {"printenv", NULL};
+	/* Commands to run. */
+	char *printenv_args[] = {"printenv", NULL};
 	char *sort_args[] = {"sort", NULL};
-*/	char *pager_args[] = {"placeholder", NULL};
+	char *pager_args[] = {"pager", NULL};
 
 	/* Piping stuff. */
-	pid_t pidPrintenv, pidSort;
-	int status, pipa[2];
+	int status, i;
 
-	char *pager = get_pager();
-	pager_args[0] = pager;
+	int pipes[6];
+	pipe(pipes); /* sets up 1st pipe */
+	pipe(pipes + 2); /* sets up 2nd pipe */
+	pipe(pipes + 4); /* sets up 2nd pipe */
+
+
+	/* we now have 4 fds: */
+	/* pipes[0] = read end of cat->grep pipe (read by grep) */
+	/* pipes[1] = write end of cat->grep pipe (written by cat) */
+	/* pipes[2] = read end of grep->cut pipe (read by cut) */
+	/* pipes[3] = write end of grep->cut pipe (written by grep) */
+
+	/* Note that the code in each if is basically identical, so you */
+	/* could set up a loop to handle it.  The differences are in the */
+	/* indicies into pipes used for the dup2 system call */
+	/* and that the 1st and last only deal with the end of one pipe. */
+
+
+	/* Decide pager program. */
+	pager_args[0] = get_pager();
 	grep_args[0] = "grep";
 
-	if(-1 == pipe(pipa)) {
+	/* Create a pipe. */
+	if(-1 == pipe(pipes)) {
+		printf("\n\n\n\n\nerror!\n\n\n\n\n");
+	}
+	if(-1 == pipe(pipes+2)) {
 		printf("\n\n\n\n\nerror!\n\n\n\n\n");
 	}
 
 	printf("args: %s\n", grep_args[1]);
-	printf("pager: %s\n", pager);
+	printf("pager: %s\n", pager_args[0]);
 
-	if((pidPrintenv = fork()) == 0) {
-		dup2(pipa[WRITE], WRITE);
-		close(pipa[READ]);
-		close(pipa[WRITE]);
-		execlp("printenv", "printenv", NULL);
+	if(fork() == 0) {
+		dup2(pipes[1], 1);
+
+		close(pipes[0]);
+		close(pipes[1]);
+		close(pipes[2]);
+		close(pipes[3]);
+		close(pipes[4]);
+		close(pipes[5]);
+
+		execvp(printenv_args[0], printenv_args);
 	}
 
-	if((pidSort = fork()) == 0)	{
-		dup2(pipa[READ], READ);
-		close(pipa[READ]);
-		close(pipa[WRITE]);
-		execlp("sort", "sort", NULL);
+	if(fork() == 0) {
+		/* Read from stdin. */
+		dup2(pipes[0], 0);
+
+		/* Write to stdout. */
+		dup2(pipes[3], 1);
+
+		close(pipes[0]);
+		close(pipes[1]);
+		close(pipes[2]);
+		close(pipes[3]);
+		close(pipes[4]);
+		close(pipes[5]);
+
+		execvp(sort_args[0], sort_args);
 	}
 
-	close(pipa[WRITE]);
-	close(pipa[READ]);
-	wait(&status);
-	wait(&status);
+	if (grep_args[1] != NULL){
+		if(fork() == 0) {
+			/* Stdin. */
+			dup2(pipes[2], 0);
+
+			/* Stdout. */
+			dup2(pipes[5], 1);
+
+			close(pipes[0]);
+			close(pipes[1]);
+			close(pipes[2]);
+			close(pipes[3]);
+			close(pipes[4]);
+			close(pipes[5]);
+
+			execvp(grep_args[0], grep_args);
+		}
+		if(fork() == 0) {
+			/* Stdin. */
+			dup2(pipes[4], 0);
+
+			close(pipes[0]);
+			close(pipes[1]);
+			close(pipes[2]);
+			close(pipes[3]);
+			close(pipes[4]);
+			close(pipes[5]);
+
+			execvp(pager_args[0], pager_args);
+		}
+	} else {
+		if(fork() == 0) {
+			/* Stdin. */
+			dup2(pipes[2], 0);
+
+			close(pipes[0]);
+			close(pipes[1]);
+			close(pipes[2]);
+			close(pipes[3]);
+			close(pipes[4]);
+			close(pipes[5]);
+
+			execvp(pager_args[0], pager_args);
+		}
+	}
+
+	close(pipes[0]);
+	close(pipes[1]);
+	close(pipes[2]);
+	close(pipes[3]);
+	close(pipes[4]);
+	close(pipes[5]);
+
+	for (i = 0; i < 3; i++) {
+		wait(&status);
+	}
 }
 
 void execute(char **argv) {
