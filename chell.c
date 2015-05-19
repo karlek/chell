@@ -55,10 +55,20 @@ void print_prompt(char *, size_t);
 void close_all(int[], int);
 
 void sig_handler(int signo) {
+	int ret;
 	if (signo == SIGINT) {
 		return;
 		printf("received SIGINT\n");
-	} else {
+	} else if(signo == SIGCHLD){
+		printf("received SIGCHLD\n");
+		ret = kill(getppid(), 2);
+		if(ret < 0){
+			printf("failed to send asd kill to %d", getppid());
+		}else{
+			printf("sending 1 to %d", getppid());
+		}
+		return;
+	}else {
 		printf("win\n");
 	}
 }
@@ -78,7 +88,11 @@ void handle_signals() {
 }
 
 int main(int argc, char const *argv[]) {
-	/* Whole input string. */	
+	
+	/* Print the main parent's id */	
+	printf("Parent id: %d\n", getpid());
+	
+	/* Whole input string. */
 	char input[INP_LEN] = "";
 
 	char *args[32];
@@ -95,6 +109,7 @@ int main(int argc, char const *argv[]) {
 	handle_signals();
 
 	memset(wd, 0, sizeof(wd));
+	sigset(1337, sig_handler);
 
 	while (1) {
 		print_prompt(wd, sizeof(wd));
@@ -125,6 +140,8 @@ int main(int argc, char const *argv[]) {
 		} else if (strcmp("&", args[nwords-1]) == 0) {
 			/* Remove the '&'. */
 			background(nwords, args);
+			
+
 		} else {
 			gettimeofday(&begin, 0);
 			execute(args); 
@@ -162,14 +179,14 @@ void background(int argc, char **argv) {
 
 	if((pid = fork()) == 0)
 	{
-		signal(SIGCHLD, handler);
+		sigset(SIGCHLD, sig_handler);
 		sighold(SIGCHLD);
 		execute(argv);
 		fprintf(stdout,"\n“%s” has ended.\n", command);
 		sigrelse(SIGCHLD);
 		exit(0);
 	}
-	kill(pid, SIGCHLD);
+	kill(getpid(), SIGCHLD);
 }
 
 int parse(char *line, char *argv[32], size_t size) {
@@ -341,7 +358,6 @@ void checkEnv(int argc, char **grep_args) {
 	printf("args: %s\n", grep_args[1]);
 	printf("pager: %s\n", pager_args[0]);
 
-	/* Why the double forking..? */
 	if(fork() == 0) {
 		dup2(pipes[1], STDOUT);
 
@@ -425,6 +441,7 @@ void execute(char **argv) {
 
 		/* Wait for completion. */
 		while (wait(&status) != pid);
+		return;
 	}
 }
 
