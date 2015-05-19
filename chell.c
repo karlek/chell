@@ -214,15 +214,15 @@ void pwd(char *wd, size_t size) {
 	}
 }
 
-void exists(char * command) {
+void exists(char *command) {
 	/* /dev/null file-descriptor. */
 	int fd;
 
 	/* Command to execute. */
-	char *which_args[] = {"which", "placeholder", NULL};
+	char *command_args[] = {"placeholder", NULL};
 
 	/* Which command exists? */
-	which_args[1] = command;
+	command_args[0] = command;
 
 	/* Pipe to /dev/null. */
 	fd = open("/dev/null", O_WRONLY);
@@ -235,7 +235,7 @@ void exists(char * command) {
 	close(fd);
 
 	/* Run the command. */
-	if (-1 == execvp(*which_args, which_args)) {
+	if (-1 == execvp(command_args[0], command_args)) {
 		exit(1);
 	}
 }
@@ -269,7 +269,6 @@ void close_all(int *pipes, int n) {
 }
 
 
-/* Still broken, needs to be implemented with pipe. */
 void checkEnv(int argc, char **grep_args) {
 	/* Commands to run. */
 	char *printenv_args[] = {"printenv", NULL};
@@ -280,10 +279,10 @@ void checkEnv(int argc, char **grep_args) {
 	int status, i;
 
 	int pipes[6];
+
 	pipe(pipes); /* sets up 1st pipe */
 	pipe(pipes + 2); /* sets up 2nd pipe */;
 	pipe(pipes + 4); /* sets up 2nd pipe */
-
 
 	/* we now have 4 fds: */
 	/* pipes[0] = read end of cat->grep pipe (read by grep) */
@@ -365,6 +364,7 @@ void checkEnv(int argc, char **grep_args) {
 
 	close_all(pipes, 6);
 
+	/* ### If we don't grep anything, should this number be 3? */
 	for (i = 0; i < 4; i++) {
 		wait(&status);
 	}
