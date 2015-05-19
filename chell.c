@@ -16,6 +16,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#define SIGDET 1
+
 #define INP_LEN 256
 #define CMD_LEN 256
 #define ARG_LEN 256
@@ -48,6 +50,30 @@ int parse(char *, char **, size_t);
 void checkEnv();
 void execute(char **);
 void print_prompt(char *, size_t);
+void close_all(int[], int);
+
+void sig_handler(int signo) {
+	if (signo == SIGINT) {
+		return;
+		printf("received SIGINT\n");
+	} else {
+		printf("win\n");
+	}
+}
+
+void handle_signals() {
+	struct sigaction sa;
+
+	sa.sa_handler = sig_handler;
+	sigemptyset(&sa.sa_mask);
+	/* Restart functions if interrupted by handler */
+	sa.sa_flags = SA_RESTART;
+
+	/* Handle error */
+	if (sigaction(SIGINT, &sa, NULL) == -1) {
+		printf("error: sigaction.\n");
+	}
+}
 
 int main(int argc, char const *argv[]) {
 	/* Whole input string. */
@@ -63,6 +89,8 @@ int main(int argc, char const *argv[]) {
 	int nwords = 0;
 
 	long elapsed;
+
+	handle_signals();
 
 	memset(wd, 0, sizeof(wd));
 
@@ -215,15 +243,15 @@ void pwd(char *wd, size_t size) {
 	}
 }
 
-void exists(char * command) {
+void exists(char *command) {
 	/* /dev/null file-descriptor. */
 	int fd;
 
 	/* Command to execute. */
-	char *which_args[] = {"which", "placeholder", NULL};
+	char *command_args[] = {"placeholder", NULL};
 
 	/* Which command exists? */
-	which_args[1] = command;
+	command_args[0] = command;
 
 	/* Pipe to /dev/null. */
 	fd = open("/dev/null", O_WRONLY);
@@ -236,7 +264,7 @@ void exists(char * command) {
 	close(fd);
 
 	/* Run the command. */
-	if (-1 == execvp(*which_args, which_args)) {
+	if (-1 == execvp(command_args[0], command_args)) {
 		exit(1);
 	}
 }
@@ -280,7 +308,6 @@ void checkEnv(int argc, char **grep_args) {
 	int status, i;
 
 	int pipes[6];
-
 
 	/* we now have 4 fds: */
 	/* pipes[0] = read end of cat->grep pipe (read by grep) */
@@ -365,6 +392,7 @@ void checkEnv(int argc, char **grep_args) {
 
 	close_all(pipes, 6);
 
+	/* ### If we don't grep anything, should this number be 3? */
 	for (i = 0; i < 4; i++) {
 		wait(&status);
 	}
