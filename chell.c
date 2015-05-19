@@ -16,7 +16,9 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define SIGDET 1
+#ifndef SIGDET
+	#define SIGDET 0
+#endif
 
 #define INP_LEN 256
 #define CMD_LEN 256
@@ -43,7 +45,6 @@
 
 const char * prompt = "%s(^._.^)ﾉ%s %s@%s %s%s%s %s$%s ";
 
-/* Tell the compiler that these functions do indeed exist.. */
 void background(int, char **);
 void cd(char *);
 void pwd(char *, size_t);
@@ -77,7 +78,7 @@ void handle_signals() {
 }
 
 int main(int argc, char const *argv[]) {
-	/* Whole input string. */
+	/* Whole input string. */	
 	char input[INP_LEN] = "";
 
 	char *args[32];
@@ -215,8 +216,7 @@ int parse(char *line, char *argv[32], size_t size) {
 	return argc;
 }
 
-/* Is this still true? */
-/* Doesn't work for ~root */ 
+/* Doesn't work for ~root */
 void cd(char * input) {
 	int ret = 0;
 	char path[256] = "";
@@ -341,6 +341,7 @@ void checkEnv(int argc, char **grep_args) {
 	printf("args: %s\n", grep_args[1]);
 	printf("pager: %s\n", pager_args[0]);
 
+	/* Why the double forking..? */
 	if(fork() == 0) {
 		dup2(pipes[1], STDOUT);
 
@@ -395,7 +396,10 @@ void checkEnv(int argc, char **grep_args) {
 	close_all(pipes, 6);
 
 	/* ### If we don't grep anything, should this number be 3? */
-	for (i = 0; i < 4; i++) {
+	for (i = 0; i < 3; i++) {
+		wait(&status);
+	}
+	if(grep_args[1] == NULL){
 		wait(&status);
 	}
 }
