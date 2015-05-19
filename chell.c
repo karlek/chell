@@ -16,6 +16,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#define SIGDET 1
+
 #define INP_LEN 256
 #define CMD_LEN 256
 #define ARG_LEN 256
@@ -47,6 +49,30 @@ int parse(char *, char **, size_t);
 void checkEnv();
 void execute(char **);
 void print_prompt(char *, size_t);
+void close_all(int[], int);
+
+void sig_handler(int signo) {
+	if (signo == SIGINT) {
+		return;
+		printf("received SIGINT\n");
+	} else {
+		printf("win\n");
+	}
+}
+
+void handle_signals() {
+	struct sigaction sa;
+
+	sa.sa_handler = sig_handler;
+	sigemptyset(&sa.sa_mask);
+	/* Restart functions if interrupted by handler */
+	sa.sa_flags = SA_RESTART;
+
+	/* Handle error */
+	if (sigaction(SIGINT, &sa, NULL) == -1) {
+		printf("error: sigaction.\n");
+	}
+}
 
 int main(int argc, char const *argv[]) {
 	/* Whole input string. */
@@ -62,6 +88,8 @@ int main(int argc, char const *argv[]) {
 	int nwords = 0;
 
 	long elapsed;
+
+	handle_signals();
 
 	memset(wd, 0, sizeof(wd));
 
