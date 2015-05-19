@@ -263,6 +263,14 @@ char *get_pager() {
 	return pager;
 }
 
+void close_all(int *pipes, int n) {
+	int i;
+	for (i = 0; i < n; ++i) {
+		close(pipes[i]);
+	}
+}
+
+
 /* Still broken, needs to be implemented with pipe. */
 void checkEnv(int argc, char **grep_args) {
 	/* Commands to run. */
@@ -275,7 +283,7 @@ void checkEnv(int argc, char **grep_args) {
 
 	int pipes[6];
 	pipe(pipes); /* sets up 1st pipe */
-	pipe(pipes + 2); /* sets up 2nd pipe */
+	pipe(pipes + 2); /* sets up 2nd pipe */;
 	pipe(pipes + 4); /* sets up 2nd pipe */
 
 
@@ -309,12 +317,7 @@ void checkEnv(int argc, char **grep_args) {
 	if(fork() == 0) {
 		dup2(pipes[1], 1);
 
-		close(pipes[0]);
-		close(pipes[1]);
-		close(pipes[2]);
-		close(pipes[3]);
-		close(pipes[4]);
-		close(pipes[5]);
+		close_all(pipes, 6);
 
 		execvp(printenv_args[0], printenv_args);
 	}
@@ -326,12 +329,7 @@ void checkEnv(int argc, char **grep_args) {
 		/* Write to stdout. */
 		dup2(pipes[3], 1);
 
-		close(pipes[0]);
-		close(pipes[1]);
-		close(pipes[2]);
-		close(pipes[3]);
-		close(pipes[4]);
-		close(pipes[5]);
+		close_all(pipes, 6);
 
 		execvp(sort_args[0], sort_args);
 	}
@@ -344,12 +342,7 @@ void checkEnv(int argc, char **grep_args) {
 			/* Stdout. */
 			dup2(pipes[5], 1);
 
-			close(pipes[0]);
-			close(pipes[1]);
-			close(pipes[2]);
-			close(pipes[3]);
-			close(pipes[4]);
-			close(pipes[5]);
+			close_all(pipes, 6);
 
 			execvp(grep_args[0], grep_args);
 		}
@@ -357,12 +350,7 @@ void checkEnv(int argc, char **grep_args) {
 			/* Stdin. */
 			dup2(pipes[4], 0);
 
-			close(pipes[0]);
-			close(pipes[1]);
-			close(pipes[2]);
-			close(pipes[3]);
-			close(pipes[4]);
-			close(pipes[5]);
+			close_all(pipes, 6);
 
 			execvp(pager_args[0], pager_args);
 		}
@@ -371,25 +359,15 @@ void checkEnv(int argc, char **grep_args) {
 			/* Stdin. */
 			dup2(pipes[2], 0);
 
-			close(pipes[0]);
-			close(pipes[1]);
-			close(pipes[2]);
-			close(pipes[3]);
-			close(pipes[4]);
-			close(pipes[5]);
+			close_all(pipes, 6);
 
 			execvp(pager_args[0], pager_args);
 		}
 	}
 
-	close(pipes[0]);
-	close(pipes[1]);
-	close(pipes[2]);
-	close(pipes[3]);
-	close(pipes[4]);
-	close(pipes[5]);
+	close_all(pipes, 6);
 
-	for (i = 0; i < 3; i++) {
+	for (i = 0; i < 4; i++) {
 		wait(&status);
 	}
 }
