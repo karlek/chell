@@ -31,8 +31,9 @@
 
 #define NAME "chell"
 
-#define WRITE 1
-#define READ 0
+#define STDERR 2
+#define STDOUT 1
+#define STDIN 0
 
 /* The 5 is which color index 0-7; then 0-255m.*/
 /* Hex color codes can be calculated with: COLOR = r*6^2 + g*6 + b) + 16. */
@@ -228,9 +229,9 @@ void exists(char * command) {
 	fd = open("/dev/null", O_WRONLY);
 
 	/* Redirect stdout. */
-	dup2(fd, 1);
+	dup2(fd, STDOUT);
 	/* Redirect stderr. */
-	dup2(fd, 2);
+	dup2(fd, STDERR);
 	/* fd no longer needed - dup knows whats up. */
 	close(fd);
 
@@ -269,7 +270,6 @@ void close_all(int *pipes, int n) {
 }
 
 
-/* Still broken, needs to be implemented with pipe. */
 void checkEnv(int argc, char **grep_args) {
 	/* Commands to run. */
 	char *printenv_args[] = {"printenv", NULL};
@@ -280,9 +280,6 @@ void checkEnv(int argc, char **grep_args) {
 	int status, i;
 
 	int pipes[6];
-	pipe(pipes); /* sets up 1st pipe */
-	pipe(pipes + 2); /* sets up 2nd pipe */;
-	pipe(pipes + 4); /* sets up 2nd pipe */
 
 
 	/* we now have 4 fds: */
@@ -303,17 +300,20 @@ void checkEnv(int argc, char **grep_args) {
 
 	/* Create a pipe. */
 	if(-1 == pipe(pipes)) {
-		printf("\n\n\n\n\nerror!\n\n\n\n\n");
+		fprintf(stderr,"PIPE error: %s\n", strerror(errno));
 	}
 	if(-1 == pipe(pipes+2)) {
-		printf("\n\n\n\n\nerror!\n\n\n\n\n");
+		fprintf(stderr,"PIPE+2 error: %s\n", strerror(errno));
+	}
+	if(-1 == pipe(pipes+4)) {
+		fprintf(stderr,"PIPE+4 error: %s\n", strerror(errno));
 	}
 
 	printf("args: %s\n", grep_args[1]);
 	printf("pager: %s\n", pager_args[0]);
 
 	if(fork() == 0) {
-		dup2(pipes[1], 1);
+		dup2(pipes[1], STDOUT);
 
 		close_all(pipes, 6);
 
@@ -322,10 +322,10 @@ void checkEnv(int argc, char **grep_args) {
 
 	if(fork() == 0) {
 		/* Read from stdin. */
-		dup2(pipes[0], 0);
+		dup2(pipes[0], STDIN);
 
 		/* Write to stdout. */
-		dup2(pipes[3], 1);
+		dup2(pipes[3], STDOUT);
 
 		close_all(pipes, 6);
 
@@ -335,10 +335,10 @@ void checkEnv(int argc, char **grep_args) {
 	if (grep_args[1] != NULL){
 		if(fork() == 0) {
 			/* Stdin. */
-			dup2(pipes[2], 0);
+			dup2(pipes[2], STDIN);
 
 			/* Stdout. */
-			dup2(pipes[5], 1);
+			dup2(pipes[5], STDOUT);
 
 			close_all(pipes, 6);
 
@@ -346,7 +346,7 @@ void checkEnv(int argc, char **grep_args) {
 		}
 		if(fork() == 0) {
 			/* Stdin. */
-			dup2(pipes[4], 0);
+			dup2(pipes[4], STDIN);
 
 			close_all(pipes, 6);
 
@@ -355,7 +355,7 @@ void checkEnv(int argc, char **grep_args) {
 	} else {
 		if(fork() == 0) {
 			/* Stdin. */
-			dup2(pipes[2], 0);
+			dup2(pipes[2], STDIN);
 
 			close_all(pipes, 6);
 
