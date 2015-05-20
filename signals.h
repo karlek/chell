@@ -1,8 +1,7 @@
 /* signals.h implements a signal handler */
 #define _signals_h
 
-/* sig_handler handles SIGCHLD and SIGINT signals.
-*/
+/* sig_handler handles SIGCHLD and SIGINT signals.*/
 void sig_handler(int signo) {
 	if(signo == SIGCHLD){
 		waitpid(-1, NULL, WNOHANG);
