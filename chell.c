@@ -31,9 +31,6 @@
 
 #define NAME "chell"
 
-#define WRITE 1
-#define READ 0
-
 /* The 5 is which color index 0-7; then 0-255m.*/
 /* Hex color codes can be calculated with: COLOR = r*6^2 + g*6 + b) + 16. */
 #define SPECIAL "\x1b[38;5;150m"
