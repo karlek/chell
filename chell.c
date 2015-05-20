@@ -83,10 +83,6 @@ void handle_signals() {
 }
 
 int main(int argc, char const *argv[]) {
-	
-	/* Print the main parent's id */	
-	printf("Parent id: %d\n", getpid());
-	
 	/* Whole input string. */
 	char input[INP_LEN] = "";
 
@@ -100,6 +96,9 @@ int main(int argc, char const *argv[]) {
 	int nwords = 0;
 
 	long elapsed;
+
+	/* Print the main parent's id */
+	printf("Parent id: %d\n", getpid());
 
 	handle_signals();
 
@@ -135,11 +134,11 @@ int main(int argc, char const *argv[]) {
 		} else if (strcmp("&", args[nwords-1]) == 0) {
 			/* Remove the '&'. */
 			background(nwords, args);
-			
+
 
 		} else {
 			gettimeofday(&begin, 0);
-			execute(args); 
+			execute(args);
 			gettimeofday(&end, 0);
 			elapsed = (end.tv_sec-begin.tv_sec)*1000000 + end.tv_usec-begin.tv_usec;
 			printf("time: %.3fs\n", (double)elapsed/1000000);
