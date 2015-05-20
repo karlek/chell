@@ -2,6 +2,7 @@
 
 void sig_handler(int signo) {
 	int ret;
+
 	if (signo == SIGINT) {
 		return;
 	} else if(signo == SIGCHLD){
