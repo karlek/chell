@@ -62,7 +62,7 @@ void interpret(int argc, char **argv, char *wd, size_t size) {
 	struct timeval begin, end;
 
 	/* Total execution time (end-begin). */
-	long elapsed;
+	long ELAPSED;
 
 	/* Interpret the entered command. */
 
