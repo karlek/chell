@@ -22,6 +22,7 @@
 #define STDOUT 1
 #define STDIN 0
 
+/* exists is used with fork and wait(&status) to determine if a command exists.*/
 void exists(char *command) {
 	/* /dev/null file-descriptor. */
 	int fd;
@@ -48,6 +49,9 @@ void exists(char *command) {
 	}
 }
 
+/* get_pager returns a pager command string. Firstly it uses the environmental
+ variable `$PAGER`, if it's not set it's set to `less` and finally if `less` is
+ not available it defaults to `more`.*/
 char *get_pager() {
 	/* Pid of the `which less` test. */
 	pid_t pid_less;
@@ -55,13 +59,13 @@ char *get_pager() {
 	int status;
 
 	char *pager = getenv("PAGER");
-
 	if (pager == NULL) {
 		pager = "less";
 	}
 	if ((pid_less = fork()) == 0){
 		exists(pager);
 	}
+	/* Wait for fork return. */
 	while (wait(&status) != pid_less);
 	if (status == 256) {
 		pager = "more";
@@ -69,6 +73,7 @@ char *get_pager() {
 	return pager;
 }
 
+/* Takes a int list of pipes and closes them.*/
 void close_all(int *pipes, int n) {
 	int i;
 	for (i = 0; i < n; ++i) {
@@ -76,34 +81,36 @@ void close_all(int *pipes, int n) {
 	}
 }
 
+/* checkEnv pretty prints all environmental variables and sorts them. If a
+ optional argument is passed, the environmental variables are filtered with
+ `grep argument`.*/
 void checkEnv(int argc, char **grep_args) {
 	/* Commands to run. */
 	char *printenv_args[] = {"printenv", NULL};
 	char *sort_args[] = {"sort", NULL};
+	/* pager here is placeholder.*/
 	char *pager_args[] = {"pager", NULL};
 
 	/* Piping stuff. */
 	int status, i;
-
+	/* we now have 6 fds: */
+	/* the pipes distribution is dependent on any optional grep arguments. */
+	/* */
+	/* pipes[0] = read end of printenv->sort pipe (read by sort) */
+	/* pipes[1] = write end of printenv->sort pipe (written by printenv) */
+	/* pipes[2] = read end of sort->grep/pager pipe (read by grep/pager) */
+	/* pipes[3] = write end of sort->grep/pager pipe (written by sort) */
+	/* */
+	/* This only happens if we have a filter argument to grep.*/
+	/* pipes[4] = write end of grep->pager pipe (written by grep) */
+	/* pipes[5] = write end of grep->pager pipe (written by grep) */
 	int pipes[6];
-
-	/* we now have 4 fds: */
-	/* pipes[0] = read end of cat->grep pipe (read by grep) */
-	/* pipes[1] = write end of cat->grep pipe (written by cat) */
-	/* pipes[2] = read end of grep->cut pipe (read by cut) */
-	/* pipes[3] = write end of grep->cut pipe (written by grep) */
-
-	/* Note that the code in each if is basically identical, so you */
-	/* could set up a loop to handle it.  The differences are in the */
-	/* indicies into pipes used for the dup2 system call */
-	/* and that the 1st and last only deal with the end of one pipe. */
-
 
 	/* Decide pager program. */
 	pager_args[0] = get_pager();
 	grep_args[0] = "grep";
 
-	/* Create a pipe. */
+	/* Create pipes. */
 	if(-1 == pipe(pipes)) {
 		fprintf(stderr,"PIPE error: %s\n", strerror(errno));
 	}
@@ -114,77 +121,73 @@ void checkEnv(int argc, char **grep_args) {
 		fprintf(stderr,"PIPE+4 error: %s\n", strerror(errno));
 	}
 
-	printf("args: %s\n", grep_args[1]);
-	printf("pager: %s\n", pager_args[0]);
-
 	if(fork() == 0) {
+		/* Write stdout of printenv to sort (pipes[1]). */
 		dup2(pipes[1], STDOUT);
-
 		close_all(pipes, 6);
-
 		execvp(printenv_args[0], printenv_args);
 	}
 
 	if(fork() == 0) {
-		/* Read from stdin. */
+		/* Read stdin to sort from stdout of printenv (pipes[0]). */
 		dup2(pipes[0], STDIN);
 
-		/* Write to stdout. */
+		/* Write stdout of sort to either grep or pager. */
 		dup2(pipes[3], STDOUT);
-
 		close_all(pipes, 6);
-
 		execvp(sort_args[0], sort_args);
 	}
 
+	/* If we have grep arguments, filter than show with pager.*/
 	if (grep_args[1] != NULL){
 		if(fork() == 0) {
-			/* Stdin. */
+			/* Read from sort stdout.*/
 			dup2(pipes[2], STDIN);
-
-			/* Stdout. */
+			/* Write stdout of grep to pager.*/
 			dup2(pipes[5], STDOUT);
-
 			close_all(pipes, 6);
-
 			execvp(grep_args[0], grep_args);
 		}
 		if(fork() == 0) {
-			/* Stdin. */
+			/* Read from grep stdin. */
 			dup2(pipes[4], STDIN);
-
 			close_all(pipes, 6);
-
 			execvp(pager_args[0], pager_args);
 		}
 	} else {
+		/* If we don't have any grep arguments, we don't need to filter.*/
 		if(fork() == 0) {
-			/* Stdin. */
+			/* Read from sort stdin. */
 			dup2(pipes[2], STDIN);
-
 			close_all(pipes, 6);
-
 			execvp(pager_args[0], pager_args);
 		}
 	}
 
 	close_all(pipes, 6);
 
-	/* ### If we don't grep anything, should this number be 3? */
+	/* We always have three forks.*/
 	for (i = 0; i < 3; i++) {
-		wait(&status);
+		if (wait(&status) == -1) {
+			fprintf(stderr, "wait: failed - %s\n", strerror(errno));
+		}
 	}
+	/* And sometimes we have a grep fork.*/
 	if(grep_args[1] == NULL){
-		wait(&status);
+		if (wait(&status) == -1) {
+			fprintf(stderr, "wait: failed - %s\n", strerror(errno));
+		}
 	}
 }
 
-/* Doesn't work for ~root */
+/* cd changes the current working directory to user input.*/
 void cd(char * input) {
 	int ret = 0;
 	char path[256] = "";
 
 	/* No argument -> go to home directory. */
+	/* Strings prefixed with '~' are user home folders. */
+	/* Otherwise try to goto that folder. */
 	if (input == NULL) {
 		ret = chdir(getenv("HOME"));
 	} else if ('~' == input[0]) {
@@ -200,6 +203,7 @@ void cd(char * input) {
 	}
 }
 
+/* pwd prints the current working directory. */
 void pwd(char *wd, size_t size) {
 	if (getcwd(wd, size) != NULL) {
 		printf("Current working dir: %s\n", wd);

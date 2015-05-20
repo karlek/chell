@@ -4,10 +4,10 @@
 /* sig_handler handles SIGCHLD and SIGINT signals.
 */
 void sig_handler(int signo) {
-	if (signo == SIGINT) {
-		return;
-	} else if(signo == SIGCHLD){
+	if(signo == SIGCHLD){
 		waitpid(-1, NULL, WNOHANG);
+	} else if (signo == SIGINT) {
+		return;
 	}
 }
 
@@ -15,13 +15,17 @@ void sig_handler(int signo) {
 void handle_signals() {
 	struct sigaction sa;
 
-	sa.sa_handler = sig_handler;
-	sigemptyset(&sa.sa_mask);
+	/* We want to recieve all signals by clearing the mask. */
+	if (sigemptyset(&sa.sa_mask) == -1) {
+		fprintf(stderr, "sigemptyset: failed - %s.\n", strerror(errno));
+	}
 	/* Restart functions if interrupted by handler */
 	sa.sa_flags = SA_RESTART;
+	/* sig_handler is our callback function for SIGINT. */
+	sa.sa_handler = sig_handler;
 
-	/* Handle error */
+	/* Listen for SIGINT signals. */
 	if (sigaction(SIGINT, &sa, NULL) == -1) {
-		printf("error: sigaction.\n");
+		printf("sigaction: failed - %s.\n", strerror(errno));
 	}
 }

@@ -43,4 +43,3 @@ int parse(char *line, char *argv[32], size_t size) {
 	tmp[argc] = NULL;
 	return argc;
 }
-

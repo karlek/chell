@@ -16,7 +16,9 @@ void execute(char **argv) {
 		/* For the child process. */
 
 		/* We want to kill children. */
-		signal(SIGQUIT, SIG_DFL);
+		if (signal(SIGQUIT, SIG_DFL) == SIG_ERR) {
+			fprintf(stderr, "signal: error\n");
+		}
 		/* Execute the command. */
 		if (execvp(*argv, argv) < 0) {
 			fprintf(stderr, "%s: Unknown command: %s\n", NAME, argv[0]);
@@ -30,11 +32,15 @@ void execute(char **argv) {
 	}
 }
 
+/* background allows execution of commands in a child process.*/
 void background(int argc, char **argv) {
-	pid_t pid;
+	/* Signal handling. */
 	struct sigaction sa;
+
+	/* Executed command string. */
 	char command[256] = "";
 	int i;
+
 	/* Create command string. */
 	for (i = 0; i < argc; i++) {
 		strcat(command, argv[i]);
@@ -43,23 +49,35 @@ void background(int argc, char **argv) {
 		}
 		strcat(command, " ");
 	}
+	/* Remove "&". */
 	argv[argc-1] = NULL;
 
-	/* ### WTF? */
 	if(SIGDET) {
-		sigemptyset(&sa.sa_mask);
+		/* We want to recieve all signals by clearing the mask. */
+		if (sigemptyset(&sa.sa_mask) == -1) {
+			fprintf(stderr, "sigemptyset: failed - %s.\n", strerror(errno));
+		}
+		/* No special flags. */
 		sa.sa_flags = 0;
+		/* Callback function. */
 		sa.sa_handler = sig_handler;
-		if(sigaction(SIGCHLD, &sa, NULL)== -1) {
-			fprintf(stderr, "sigaction failed\n");
+		/* Catch signal SIGCHLD and use callback function sig_handler.*/
+		if(sigaction(SIGCHLD, &sa, NULL) == -1) {
+			fprintf(stderr, "sigaction: failed - %s.\n", strerror(errno));
 		}
 	}
 
 	/* For the child process. */
-	if((pid = fork()) == 0)
+	if(fork() == 0)
 	{
 		/* We want to kill children. */
-		signal(SIGQUIT, SIG_DFL);
+		if (signal(SIGQUIT, SIG_DFL) == SIG_ERR) {
+			fprintf(stderr, "signal: failed - %s\n", strerror(errno));
+		}
+		/* But we don't want to kill background processes with 'Ctrl-c'.*/
+		if (signal(SIGINT, SIG_IGN) == SIG_ERR) {
+			fprintf(stderr, "signal: failed - %s\n", strerror(errno));
+		}
 
 		/* Execute the command. */
 		printf("\n");
