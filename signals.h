@@ -1,22 +1,17 @@
+/* signals.h implements a signal handler */
 #define _signals_h
 
+/* sig_handler handles SIGCHLD and SIGINT signals.
+*/
 void sig_handler(int signo) {
-	int ret;
-
 	if (signo == SIGINT) {
 		return;
 	} else if(signo == SIGCHLD){
-		printf("received SIGCHLD\n");
-		ret = kill(getppid(), 2);
-		if(ret < 0){
-			printf("failed to send asd kill to %d", getppid());
-		}else{
-			printf("sending 1 to %d", getppid());
-		}
-		return;
+		waitpid(-1, NULL, WNOHANG);
 	}
 }
 
+/* Only handles SIGINT. */
 void handle_signals() {
 	struct sigaction sa;
 
@@ -29,11 +24,4 @@ void handle_signals() {
 	if (sigaction(SIGINT, &sa, NULL) == -1) {
 		printf("error: sigaction.\n");
 	}
-}
-
-/* ### unused atm. */
-void handler(int signum) {
-	/* Handler for SIGCHLD in background/2 */
-	int status;
-	wait(&status);
 }

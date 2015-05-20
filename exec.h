@@ -32,6 +32,7 @@ void execute(char **argv) {
 
 void background(int argc, char **argv) {
 	pid_t pid;
+	struct sigaction sa;
 	char command[256] = "";
 	int i;
 	/* Create command string. */
@@ -44,18 +45,30 @@ void background(int argc, char **argv) {
 	}
 	argv[argc-1] = NULL;
 
+	/* ### WTF? */
+	if(SIGDET) {
+		sigemptyset(&sa.sa_mask);
+		sa.sa_flags = 0;
+		sa.sa_handler = sig_handler;
+		if(sigaction(SIGCHLD, &sa, NULL)== -1) {
+			fprintf(stderr, "sigaction failed\n");
+		}
+	}
+
+	/* For the child process. */
 	if((pid = fork()) == 0)
 	{
-		if(SIGDET) {
-			sigset(SIGCHLD, sig_handler);
-		}
-		sighold(SIGCHLD);
+		/* We want to kill children. */
+		signal(SIGQUIT, SIG_DFL);
+
+		/* Execute the command. */
+		printf("\n");
 		execute(argv);
+
 		if (SIGDET) {
-			fprintf(stdout,"\n“%s” has ended.\n", command);
+			fprintf(stdout,"“%s” has ended.\n", command);
 		}
-		sigrelse(SIGCHLD);
+		/* ### might be bad that we return zero. Should return executes ret? */
 		exit(0);
 	}
-	kill(getpid(), SIGCHLD);
 }

@@ -27,14 +27,9 @@ int main(int argc, char const *argv[]) {
 	/* Number of string tokens read. */
 	int nwords = 0;
 
-	/* Print the main parent's id */
-	printf("Parent id: %d\n", getpid());
-
 	/* Prevent inner-shell to kill outer-shell. exit kills all in process group.*/
 	signal(SIGQUIT, SIG_IGN);
 	handle_signals();
-
-	sigset(1337, sig_handler);
 
 	while (1) {
 		print_prompt(wd, sizeof(wd));
