@@ -46,10 +46,14 @@ void background(int argc, char **argv) {
 
 	if((pid = fork()) == 0)
 	{
-		sigset(SIGCHLD, sig_handler);
+		if(SIGDET) {
+			sigset(SIGCHLD, sig_handler);
+		}
 		sighold(SIGCHLD);
 		execute(argv);
-		fprintf(stdout,"\n“%s” has ended.\n", command);
+		if (SIGDET) {
+			fprintf(stdout,"\n“%s” has ended.\n", command);
+		}
 		sigrelse(SIGCHLD);
 		exit(0);
 	}
