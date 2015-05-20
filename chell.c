@@ -35,7 +35,7 @@
 /* Hex color codes can be calculated with: COLOR = r*6^2 + g*6 + b) + 16. */
 #define SPECIAL "\x1b[38;5;150m"
 
-const char * prompt = "%s(^._.^)ﾉ%s %s@%s %s%s%s %s$%s ";
+const char * prompt_fmt = "%s(^._.^)ﾉ%s %s@%s %s%s%s %s$%s ";
 
 void background(int, char **);
 void cd(char *);
@@ -424,7 +424,7 @@ void print_prompt(char *wd, size_t size) {
 
 	/* Print prompt. */
 	printf(
-		prompt,
+		prompt_fmt,
 		YELLOW, RESET,
 		BLACK,  RESET,
 		MAGENTA, wd, RESET,
