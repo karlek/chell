@@ -15,6 +15,8 @@ void execute(char **argv) {
 	} else if (pid == 0) {
 		/* For the child process. */
 
+		/* We want to kill children. */
+		signal(SIGQUIT, SIG_DFL);
 		/* Execute the command. */
 		if (execvp(*argv, argv) < 0) {
 			fprintf(stderr, "%s: Unknown command: %s\n", NAME, argv[0]);

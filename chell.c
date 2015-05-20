@@ -30,6 +30,8 @@ int main(int argc, char const *argv[]) {
 	/* Print the main parent's id */
 	printf("Parent id: %d\n", getpid());
 
+	/* Prevent inner-shell to kill outer-shell. exit kills all in process group.*/
+	signal(SIGQUIT, SIG_IGN);
 	handle_signals();
 
 	sigset(1337, sig_handler);
@@ -68,6 +70,7 @@ void interpret(int argc, char **argv, char *wd, size_t size) {
 
 	if (strcmp("exit", argv[0]) == 0) {
 		/* exit kills the shell. */
+		kill(0, SIGQUIT);
 		exit(0);
 	} else if (strcmp("cd", argv[0]) == 0) {
 		/* cd changes the directory. */
