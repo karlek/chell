@@ -1,14 +1,14 @@
 /* Chell is a homage to the protagonist in the portal games. */
 
+#ifndef SIGDET
+	#define SIGDET 0
+#endif
+
 #include "command.h"
 #include "prompt.h"
 #include "parse.h"
 #include "signals.h"
 #include "exec.h"
-
-#ifndef SIGDET
-	#define SIGDET 0
-#endif
 
 #define INP_LEN 256
 
