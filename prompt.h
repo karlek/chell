@@ -8,9 +8,9 @@ const char * prompt_fmt = "%s(^._.^)ﾉ%s %s@%s %s%s%s %s$%s ";
 /* poll checks for ended jobs.*/
 void poll() {
 	pid_t pid;
-	int status;
 
-	while((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+	/* Let parent process continue. */
+	while((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
 		fprintf(stdout, "[%d] job has ended.\n", pid);
 	}
 }
