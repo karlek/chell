@@ -19,8 +19,6 @@
 #define SIGDET 1
 
 #define INP_LEN 256
-#define CMD_LEN 256
-#define ARG_LEN 256
 
 #define BLACK   "\x1b[90m"
 #define RED		"\x1b[91m"
