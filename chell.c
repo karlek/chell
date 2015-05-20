@@ -16,7 +16,9 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define SIGDET 1
+#ifndef SIGDET
+	#define SIGDET 0
+#endif
 
 #define INP_LEN 256
 
@@ -30,6 +32,10 @@
 #define RESET   "\x1b[0m"
 
 #define NAME "chell"
+
+#define STDERR 2
+#define STDOUT 1
+#define STDIN 0
 
 /* The 5 is which color index 0-7; then 0-255m.*/
 /* Hex color codes can be calculated with: COLOR = r*6^2 + g*6 + b) + 16. */
@@ -47,10 +53,18 @@ void print_prompt(char *, size_t);
 void close_all(int[], int);
 
 void sig_handler(int signo) {
+	int ret;
 	if (signo == SIGINT) {
 		return;
-	} else {
-		printf("win\n");
+	} else if(signo == SIGCHLD){
+		printf("received SIGCHLD\n");
+		ret = kill(getppid(), 2);
+		if(ret < 0){
+			printf("failed to send asd kill to %d", getppid());
+		}else{
+			printf("sending 1 to %d", getppid());
+		}
+		return;
 	}
 }
 
@@ -69,6 +83,10 @@ void handle_signals() {
 }
 
 int main(int argc, char const *argv[]) {
+	
+	/* Print the main parent's id */	
+	printf("Parent id: %d\n", getpid());
+	
 	/* Whole input string. */
 	char input[INP_LEN] = "";
 
@@ -86,6 +104,7 @@ int main(int argc, char const *argv[]) {
 	handle_signals();
 
 	memset(wd, 0, sizeof(wd));
+	sigset(1337, sig_handler);
 
 	while (1) {
 		print_prompt(wd, sizeof(wd));
@@ -116,6 +135,8 @@ int main(int argc, char const *argv[]) {
 		} else if (strcmp("&", args[nwords-1]) == 0) {
 			/* Remove the '&'. */
 			background(nwords, args);
+			
+
 		} else {
 			gettimeofday(&begin, 0);
 			execute(args); 
@@ -153,14 +174,14 @@ void background(int argc, char **argv) {
 
 	if((pid = fork()) == 0)
 	{
-		signal(SIGCHLD, handler);
+		sigset(SIGCHLD, sig_handler);
 		sighold(SIGCHLD);
 		execute(argv);
 		fprintf(stdout,"\n“%s” has ended.\n", command);
 		sigrelse(SIGCHLD);
 		exit(0);
 	}
-	kill(pid, SIGCHLD);
+	kill(getpid(), SIGCHLD);
 }
 
 int parse(char *line, char *argv[32], size_t size) {
@@ -250,9 +271,9 @@ void exists(char *command) {
 	fd = open("/dev/null", O_WRONLY);
 
 	/* Redirect stdout. */
-	dup2(fd, 1);
+	dup2(fd, STDOUT);
 	/* Redirect stderr. */
-	dup2(fd, 2);
+	dup2(fd, STDERR);
 	/* fd no longer needed - dup knows whats up. */
 	close(fd);
 
@@ -302,10 +323,6 @@ void checkEnv(int argc, char **grep_args) {
 
 	int pipes[6];
 
-	pipe(pipes); /* sets up 1st pipe */
-	pipe(pipes + 2); /* sets up 2nd pipe */;
-	pipe(pipes + 4); /* sets up 2nd pipe */
-
 	/* we now have 4 fds: */
 	/* pipes[0] = read end of cat->grep pipe (read by grep) */
 	/* pipes[1] = write end of cat->grep pipe (written by cat) */
@@ -324,17 +341,20 @@ void checkEnv(int argc, char **grep_args) {
 
 	/* Create a pipe. */
 	if(-1 == pipe(pipes)) {
-		printf("\n\n\n\n\nerror!\n\n\n\n\n");
+		fprintf(stderr,"PIPE error: %s\n", strerror(errno));
 	}
 	if(-1 == pipe(pipes+2)) {
-		printf("\n\n\n\n\nerror!\n\n\n\n\n");
+		fprintf(stderr,"PIPE+2 error: %s\n", strerror(errno));
+	}
+	if(-1 == pipe(pipes+4)) {
+		fprintf(stderr,"PIPE+4 error: %s\n", strerror(errno));
 	}
 
 	printf("args: %s\n", grep_args[1]);
 	printf("pager: %s\n", pager_args[0]);
 
 	if(fork() == 0) {
-		dup2(pipes[1], 1);
+		dup2(pipes[1], STDOUT);
 
 		close_all(pipes, 6);
 
@@ -343,10 +363,10 @@ void checkEnv(int argc, char **grep_args) {
 
 	if(fork() == 0) {
 		/* Read from stdin. */
-		dup2(pipes[0], 0);
+		dup2(pipes[0], STDIN);
 
 		/* Write to stdout. */
-		dup2(pipes[3], 1);
+		dup2(pipes[3], STDOUT);
 
 		close_all(pipes, 6);
 
@@ -356,10 +376,10 @@ void checkEnv(int argc, char **grep_args) {
 	if (grep_args[1] != NULL){
 		if(fork() == 0) {
 			/* Stdin. */
-			dup2(pipes[2], 0);
+			dup2(pipes[2], STDIN);
 
 			/* Stdout. */
-			dup2(pipes[5], 1);
+			dup2(pipes[5], STDOUT);
 
 			close_all(pipes, 6);
 
@@ -367,7 +387,7 @@ void checkEnv(int argc, char **grep_args) {
 		}
 		if(fork() == 0) {
 			/* Stdin. */
-			dup2(pipes[4], 0);
+			dup2(pipes[4], STDIN);
 
 			close_all(pipes, 6);
 
@@ -376,7 +396,7 @@ void checkEnv(int argc, char **grep_args) {
 	} else {
 		if(fork() == 0) {
 			/* Stdin. */
-			dup2(pipes[2], 0);
+			dup2(pipes[2], STDIN);
 
 			close_all(pipes, 6);
 
@@ -387,7 +407,10 @@ void checkEnv(int argc, char **grep_args) {
 	close_all(pipes, 6);
 
 	/* ### If we don't grep anything, should this number be 3? */
-	for (i = 0; i < 4; i++) {
+	for (i = 0; i < 3; i++) {
+		wait(&status);
+	}
+	if(grep_args[1] == NULL){
 		wait(&status);
 	}
 }
@@ -413,6 +436,7 @@ void execute(char **argv) {
 
 		/* Wait for completion. */
 		while (wait(&status) != pid);
+		return;
 	}
 }
 
