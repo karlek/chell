@@ -1,14 +1,16 @@
 /* Chell is a homage to the protagonist in the portal games. */
 
+#ifndef SIGDET
+	#define SIGDET 0
+#endif
+
+<<<<<<< HEAD
+=======
 #include "command.h"
 #include "prompt.h"
 #include "parse.h"
 #include "signals.h"
 #include "exec.h"
-
-#ifndef SIGDET
-	#define SIGDET 0
-#endif
 
 #define INP_LEN 256
 
@@ -27,12 +29,9 @@ int main(int argc, char const *argv[]) {
 	/* Number of string tokens read. */
 	int nwords = 0;
 
-	/* Print the main parent's id */
-	printf("Parent id: %d\n", getpid());
-
+	/* Prevent inner-shell to kill outer-shell. exit kills all in process group.*/
+	signal(SIGQUIT, SIG_IGN);
 	handle_signals();
-
-	sigset(1337, sig_handler);
 
 	while (1) {
 		print_prompt(wd, sizeof(wd));
@@ -62,12 +61,13 @@ void interpret(int argc, char **argv, char *wd, size_t size) {
 	struct timeval begin, end;
 
 	/* Total execution time (end-begin). */
-	long ELAPSED;
+	long elapsed;
 
 	/* Interpret the entered command. */
 
 	if (strcmp("exit", argv[0]) == 0) {
 		/* exit kills the shell. */
+		kill(0, SIGQUIT);
 		exit(0);
 	} else if (strcmp("cd", argv[0]) == 0) {
 		/* cd changes the directory. */
