@@ -15,10 +15,6 @@ void execute(char **argv) {
 	} else if (pid == 0) {
 		/* For the child process. */
 
-		/* We want to kill children. */
-		if (signal(SIGQUIT, SIG_DFL) == SIG_ERR) {
-			fprintf(stderr, "signal: error\n");
-		}
 		/* Execute the command. */
 		if (execvp(*argv, argv) < 0) {
 			fprintf(stderr, "%s: Unknown command: %s\n", NAME, argv[0]);
@@ -85,7 +81,6 @@ void background(int argc, char **argv) {
 		if (SIGDET) {
 			fprintf(stdout,"“%s” has ended.\n", command);
 		}
-		/* ### might be bad that we return zero. Should return executes ret? */
 		exit(0);
 	}
 }
