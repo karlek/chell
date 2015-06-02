@@ -89,7 +89,6 @@ void interpret(int argc, char **argv, char *wd, size_t size) {
 	long elapsed;
 
 	/* Interpret the entered command. */
-
 	if (strcmp("exit", argv[0]) == 0) {
 		/* exit kills the shell. */
 		kill(0, SIGQUIT);

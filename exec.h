@@ -24,7 +24,7 @@ void execute(char **argv) {
 		/* For the parent. */
 
 		/* Wait for completion. */
-		while (wait(&status) != pid);
+		while (waitpid(pid, &status, WUNTRACED) != pid);
 	}
 }
 
