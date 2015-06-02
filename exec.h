@@ -57,8 +57,8 @@ void background(int argc, char **argv) {
 		if (sigemptyset(&sa.sa_mask) == -1) {
 			fprintf(stderr, "sigemptyset: failed - %s.\n", strerror(errno));
 		}
-		/* No special flags. */
-		sa.sa_flags = 0;
+		/* We want the program to continue execution. */
+		sa.sa_flags = SA_RESTART;
 		/* Callback function. */
 		sa.sa_handler = sig_handler;
 		/* Catch signal SIGCHLD and use callback function sig_handler.*/
