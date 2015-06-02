@@ -173,7 +173,7 @@ void checkEnv(int argc, char **grep_args) {
 		}
 	}
 	/* And sometimes we have a grep fork.*/
-	if (grep_args[1] == NULL) {
+	if (grep_args[1] != NULL) {
 		if (wait(&status) == -1) {
 			fprintf(stderr, "wait: failed - %s\n", strerror(errno));
 		}
