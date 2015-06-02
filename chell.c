@@ -13,6 +13,32 @@
 #define INP_LEN 256
 
 void interpret(int, char **, char *, size_t);
+void get_line(char *, size_t);
+
+void get_input(char *input, size_t size) {
+	int i;
+	char c;
+	char *start = input;
+	for (i = 0; i < (int)size; i++) {
+		/* Read input. */
+		c = getc(stdin);
+		/* -1 == EOF */
+		if (c == -1) {
+			/* Quit chell if no command is inputted. */
+			if(strlen(start) == 0) {
+				kill(0, SIGQUIT);
+				exit(0);
+			}
+			/* Otherwise ignore this. */
+			continue;
+		}
+		/* Add input to buffer. */
+		*input++ = c;
+		if (c == '\n') {
+			break;
+		}
+	}
+}
 
 int main(int argc, char const *argv[]) {
 	/* Whole input line. */
@@ -35,8 +61,7 @@ int main(int argc, char const *argv[]) {
 		print_prompt(wd, sizeof(wd));
 
 		/* Get user input. */
-		fgets(input, sizeof(input), stdin);
-
+		get_input(input, sizeof(input));
 		/* Get string tokens. */
 		nwords = parse(input, args, 32);
 		switch (nwords) {
