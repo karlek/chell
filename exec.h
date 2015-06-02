@@ -80,7 +80,6 @@ void background(int argc, char **argv) {
 		}
 
 		/* Execute the command. */
-		printf("\n");
 		execute(argv);
 
 		if (SIGDET) {

@@ -68,6 +68,8 @@ int main(int argc, char const *argv[]) {
 		case -1:
 			fprintf(stderr, "%s: too many arguments.\n", NAME);
 		case 0:
+			/* Defer would be nice, eh?*/
+			memset(input, 0, strlen(input));
 			continue;
 		}
 
