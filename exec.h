@@ -28,17 +28,15 @@ void execute(char **argv) {
 	}
 }
 
-/* background allows execution of commands in a child process.*/
-void background(int argc, char **argv) {
-	/* Signal handling. */
-	struct sigaction sa;
-
-	/* Executed command string. */
-	char command[256] = "";
-	int i;
-
-	/* Create command string. */
+/* Create command strings: "“example command &” has ended.\n". */
+char * command_string(int argc, char **argv, char *command, size_t size) {
+	char *ret = command;
+	int i, len = 0;
 	for (i = 0; i < argc; i++) {
+		len += strlen(argv[i])+1;
+		if (len > (int)size) {
+			break;
+		}
 		strcat(command, argv[i]);
 		if (i+1 == argc) {
 			break;
@@ -47,20 +45,36 @@ void background(int argc, char **argv) {
 	}
 	/* Remove "&". */
 	argv[argc-1] = NULL;
+	return ret;
+}
+
+/* Signal determination - setup for the signal action handler. */
+void sig_setup(struct sigaction sa) {
+	/* We want to recieve all signals by clearing the mask. */
+	if (sigemptyset(&sa.sa_mask) == -1) {
+		fprintf(stderr, "sigemptyset: failed - %s.\n", strerror(errno));
+	}
+	/* We want the program to continue execution. */
+	sa.sa_flags = SA_RESTART;
+	/* Callback function. */
+	sa.sa_handler = sig_handler;
+	/* Catch signal SIGCHLD and use callback function sig_handler.*/
+	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
+		fprintf(stderr, "sigaction: failed - %s.\n", strerror(errno));
+	}
+}
+
+/* background allows execution of commands in a child process.*/
+void background(int argc, char **argv) {
+	/* Signal handling. */
+	struct sigaction sa;
+
+	/* Executed command string. */
+	char command[256] = "";
+	command_string(argc, argv, command, sizeof(command));
 
 	if (SIGDET) {
-		/* We want to recieve all signals by clearing the mask. */
-		if (sigemptyset(&sa.sa_mask) == -1) {
-			fprintf(stderr, "sigemptyset: failed - %s.\n", strerror(errno));
-		}
-		/* We want the program to continue execution. */
-		sa.sa_flags = SA_RESTART;
-		/* Callback function. */
-		sa.sa_handler = sig_handler;
-		/* Catch signal SIGCHLD and use callback function sig_handler.*/
-		if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-			fprintf(stderr, "sigaction: failed - %s.\n", strerror(errno));
-		}
+		sig_setup(sa);
 	}
 
 	/* For the child process. */
