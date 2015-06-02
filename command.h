@@ -62,7 +62,7 @@ char *get_pager() {
 	if (pager == NULL) {
 		pager = "less";
 	}
-	if ((pid_less = fork()) == 0){
+	if ((pid_less = fork()) == 0) {
 		exists(pager);
 	}
 	/* Wait for fork return. */
@@ -111,24 +111,24 @@ void checkEnv(int argc, char **grep_args) {
 	grep_args[0] = "grep";
 
 	/* Create pipes. */
-	if(-1 == pipe(pipes)) {
+	if (-1 == pipe(pipes)) {
 		fprintf(stderr,"PIPE error: %s\n", strerror(errno));
 	}
-	if(-1 == pipe(pipes+2)) {
+	if (-1 == pipe(pipes+2)) {
 		fprintf(stderr,"PIPE+2 error: %s\n", strerror(errno));
 	}
-	if(-1 == pipe(pipes+4)) {
+	if (-1 == pipe(pipes+4)) {
 		fprintf(stderr,"PIPE+4 error: %s\n", strerror(errno));
 	}
 
-	if(fork() == 0) {
+	if (fork() == 0) {
 		/* Write stdout of printenv to sort (pipes[1]). */
 		dup2(pipes[1], STDOUT);
 		close_all(pipes, 6);
 		execvp(printenv_args[0], printenv_args);
 	}
 
-	if(fork() == 0) {
+	if (fork() == 0) {
 		/* Read stdin to sort from stdout of printenv (pipes[0]). */
 		dup2(pipes[0], STDIN);
 
@@ -139,8 +139,8 @@ void checkEnv(int argc, char **grep_args) {
 	}
 
 	/* If we have grep arguments, filter than show with pager.*/
-	if (grep_args[1] != NULL){
-		if(fork() == 0) {
+	if (grep_args[1] != NULL) {
+		if (fork() == 0) {
 			/* Read from sort stdout.*/
 			dup2(pipes[2], STDIN);
 			/* Write stdout of grep to pager.*/
@@ -148,7 +148,7 @@ void checkEnv(int argc, char **grep_args) {
 			close_all(pipes, 6);
 			execvp(grep_args[0], grep_args);
 		}
-		if(fork() == 0) {
+		if (fork() == 0) {
 			/* Read from grep stdin. */
 			dup2(pipes[4], STDIN);
 			close_all(pipes, 6);
@@ -156,7 +156,7 @@ void checkEnv(int argc, char **grep_args) {
 		}
 	} else {
 		/* If we don't have any grep arguments, we don't need to filter.*/
-		if(fork() == 0) {
+		if (fork() == 0) {
 			/* Read from sort stdin. */
 			dup2(pipes[2], STDIN);
 			close_all(pipes, 6);
@@ -173,7 +173,7 @@ void checkEnv(int argc, char **grep_args) {
 		}
 	}
 	/* And sometimes we have a grep fork.*/
-	if(grep_args[1] == NULL){
+	if (grep_args[1] == NULL) {
 		if (wait(&status) == -1) {
 			fprintf(stderr, "wait: failed - %s\n", strerror(errno));
 		}
@@ -198,8 +198,8 @@ void cd(char * input) {
 		ret = chdir(input);
 	}
 	switch (ret) {
-		case -1:
-			fprintf(stderr, "cd: The directory “%s” does not exist\n", input);
+	case -1:
+		fprintf(stderr, "cd: The directory “%s” does not exist\n", input);
 	}
 }
 

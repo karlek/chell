@@ -3,7 +3,7 @@
 
 /* sig_handler handles SIGCHLD and SIGINT signals.*/
 void sig_handler(int signo) {
-	if(signo == SIGCHLD) {
+	if (signo == SIGCHLD) {
 		waitpid(-1, NULL, WNOHANG);
 	} else if (signo == SIGINT) {
 		return;

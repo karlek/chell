@@ -1,7 +1,7 @@
 /* Chell is a homage to the protagonist in the portal games. */
 
 #ifndef SIGDET
-	#define SIGDET 0
+#define SIGDET 0
 #endif
 
 #include "command.h"
@@ -25,7 +25,7 @@ void get_input(char *input, size_t size) {
 		/* -1 == EOF */
 		if (c == -1) {
 			/* Quit chell if no command is inputted. */
-			if(strlen(start) == 0) {
+			if (strlen(start) == 0) {
 				kill(0, SIGQUIT);
 				exit(0);
 			}

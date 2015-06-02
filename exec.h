@@ -52,7 +52,7 @@ void background(int argc, char **argv) {
 	/* Remove "&". */
 	argv[argc-1] = NULL;
 
-	if(SIGDET) {
+	if (SIGDET) {
 		/* We want to recieve all signals by clearing the mask. */
 		if (sigemptyset(&sa.sa_mask) == -1) {
 			fprintf(stderr, "sigemptyset: failed - %s.\n", strerror(errno));
@@ -62,13 +62,13 @@ void background(int argc, char **argv) {
 		/* Callback function. */
 		sa.sa_handler = sig_handler;
 		/* Catch signal SIGCHLD and use callback function sig_handler.*/
-		if(sigaction(SIGCHLD, &sa, NULL) == -1) {
+		if (sigaction(SIGCHLD, &sa, NULL) == -1) {
 			fprintf(stderr, "sigaction: failed - %s.\n", strerror(errno));
 		}
 	}
 
 	/* For the child process. */
-	if(fork() == 0)
+	if (fork() == 0)
 	{
 		/* We want to kill children. */
 		if (signal(SIGQUIT, SIG_DFL) == SIG_ERR) {

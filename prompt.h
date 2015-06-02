@@ -10,7 +10,7 @@ void poll() {
 	pid_t pid;
 
 	/* Let parent process continue. */
-	while((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
+	while ((pid = waitpid(-1, NULL, WNOHANG)) > 0) {
 		fprintf(stdout, "[%d] job has ended.\n", pid);
 	}
 }
@@ -30,10 +30,10 @@ void print_prompt(char *wd, size_t size) {
 
 	/* Print prompt. */
 	printf(
-		prompt_fmt,
-		YELLOW, RESET,
-		BLACK,  RESET,
-		MAGENTA, wd, RESET,
-		BLUE, RESET
+	    prompt_fmt,
+	    YELLOW, RESET,
+	    BLACK,  RESET,
+	    MAGENTA, wd, RESET,
+	    BLUE, RESET
 	);
 }
