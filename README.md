@@ -1,5 +1,21 @@
 # chell
 
+## Installation
+
+```shell
+$ git clone git@github.com:karlek/chell.git
+$ cd chell
+$ make
+# or make sigdet (if you prefer signal determination over polling)
+```
+
+## Usage
+
+```shell
+$ alias chell="rlwrap -q '"\'' -H '~/.chell-hist' -D -i -c -A ./chell"
+$ chell
+```
+
 ## Constraints
 
 * The lab should be written in ANSI standard C. (the reason for this is that one can always assume that even old systems adhere to this standard and the differences to more recent standards as C99 is not that huge)
