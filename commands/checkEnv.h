@@ -37,6 +37,7 @@ void exists(char *command) {
 char *get_pager() {
 	/* Pid of the `which less` test. */
 	pid_t pid_less;
+
 	/* Status of the child process. */
 	int status;
 
@@ -81,26 +82,32 @@ void create_pipes(int pipes[6]) {
  `grep argument`.*/
 void checkEnv(int argc, char **grep_args) {
 	/* Commands to run. */
+	char **args[4];
 	char *printenv_args[] = {"printenv", NULL};
 	char *sort_args[] = {"sort", NULL};
-	/* pager here is placeholder.*/
 	char *pager_args[] = {"pager", NULL};
 
 	/* Piping stuff. */
-	int status, i, num_proc = 3;
-	/* we now have 6 fds: */
-	/* the pipes distribution is dependent on any optional grep arguments. */
-	/* */
-	/* pipes[0] = read end of printenv->sort pipe (read by sort) */
-	/* pipes[1] = write end of printenv->sort pipe (written by printenv) */
-	/* pipes[2] = read end of sort->grep/pager pipe (read by grep/pager) */
-	/* pipes[3] = write end of sort->grep/pager pipe (written by sort) */
-	/* */
-	/* This only happens if we have a filter argument to grep.*/
-	/* pipes[4] = write end of grep->pager pipe (written by grep) */
-	/* pipes[5] = write end of grep->pager pipe (written by grep) */
+	int i = 0, num_proc = 3;
+
+	/* we now have 6 fds:
+	   the pipes distribution is dependent on any optional grep arguments.
+
+	   pipes[0] = read end of printenv->sort pipe (read by sort)
+	   pipes[1] = write end of printenv->sort pipe (written by printenv)
+	   pipes[2] = read end of sort->grep/pager pipe (read by grep/pager)
+	   pipes[3] = write end of sort->grep/pager pipe (written by sort)
+
+	   This only happens if we have a filter argument to grep
+	   pipes[4] = write end of grep->pager pipe (written by grep)
+	   pipes[5] = write end of grep->pager pipe (written by grep)
+	*/
 	int pipes[6];
 
+	/* Child pids.*/
+	pid_t pid;
+
+	/* If we have any arguments, use grep.*/
 	if (argc > 1) {
 		num_proc = 4;
 	}
@@ -109,57 +116,41 @@ void checkEnv(int argc, char **grep_args) {
 	pager_args[0] = get_pager();
 	grep_args[0] = "grep";
 
+	/* Fill args.*/
+	args[i++] = printenv_args;
+	if (num_proc == 4) {
+		args[i++] = grep_args;
+	}
+	args[i++] = sort_args;
+	args[i++] = pager_args;
+
 	create_pipes(pipes);
 
-	if (fork() == 0) {
-		/* Write stdout of printenv to sort (pipes[1]). */
-		dup2(pipes[1], STDOUT);
+	for (i = 0; i < num_proc; i++) {
+		if ((pid = fork()) < 0) {
+			fprintf(stderr, "fork: forking child process failed.\n");
+			exit(1);
+		} else if (pid != 0) {
+			break;
+		}
+		/* We don't read from stdin first pipe.*/
+		if (i != 0) {
+			dup2(pipes[(i-1)*2], STDIN);
+		}
+		/* We don't pipe stdout last pipe.*/
+		if (i != num_proc-1) {
+			dup2(pipes[i*2+1], STDOUT);
+		}
 		close_all(pipes, 6);
-		execvp(printenv_args[0], printenv_args);
+
+		execvp(*args[i], args[i]);
 	}
-
-	if (fork() == 0) {
-		/* Read stdin to sort from stdout of printenv (pipes[0]). */
-		dup2(pipes[0], STDIN);
-
-		/* Write stdout of sort to either grep or pager. */
-		dup2(pipes[3], STDOUT);
-		close_all(pipes, 6);
-		execvp(sort_args[0], sort_args);
-	}
-
-	/* If we have grep arguments, filter than show with pager.*/
-	if (grep_args[1] != NULL) {
-		if (fork() == 0) {
-			/* Read from sort stdout.*/
-			dup2(pipes[2], STDIN);
-			/* Write stdout of grep to pager.*/
-			dup2(pipes[5], STDOUT);
-			close_all(pipes, 6);
-			execvp(grep_args[0], grep_args);
-		}
-		if (fork() == 0) {
-			/* Read from grep stdin. */
-			dup2(pipes[4], STDIN);
-			close_all(pipes, 6);
-			execvp(pager_args[0], pager_args);
-		}
-	} else {
-		/* If we don't have any grep arguments, we don't need to filter.*/
-		if (fork() == 0) {
-			/* Read from sort stdin. */
-			dup2(pipes[2], STDIN);
-			close_all(pipes, 6);
-			execvp(pager_args[0], pager_args);
-		}
-	}
-
 	close_all(pipes, 6);
 
 	/* We always have three forks.*/
 	/* And sometimes we have a grep fork.*/
 	for (i = 0; i < num_proc; i++) {
-		if (wait(&status) == -1) {
+		if (wait(NULL) == -1) {
 			fprintf(stderr, "wait: failed - %s\n", strerror(errno));
 		}
 	}
