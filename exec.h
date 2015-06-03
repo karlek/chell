@@ -54,10 +54,12 @@ void sig_setup(struct sigaction sa) {
 	if (sigemptyset(&sa.sa_mask) == -1) {
 		fprintf(stderr, "sigemptyset: failed - %s.\n", strerror(errno));
 	}
+
 	/* We want the program to continue execution. */
 	sa.sa_flags = SA_RESTART;
 	/* Callback function. */
 	sa.sa_handler = sig_handler;
+
 	/* Catch signal SIGCHLD and use callback function sig_handler.*/
 	if (sigaction(SIGCHLD, &sa, NULL) == -1) {
 		fprintf(stderr, "sigaction: failed - %s.\n", strerror(errno));

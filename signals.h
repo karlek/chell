@@ -20,7 +20,7 @@ void handle_signals() {
 	}
 	/* Restart functions if interrupted by handler */
 	sa.sa_flags = SA_RESTART;
-	/* sig_handler is our callback function for SIGINT. */
+	/* sig_handler is our callback function for SIGINT and SIGCHLD. */
 	sa.sa_handler = sig_handler;
 
 	/* Listen for SIGINT signals. */

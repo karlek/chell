@@ -4,41 +4,35 @@
 #define SIGDET 0
 #endif
 
-#include "command.h"
+#define NAME "chell"
+
+/* Needed for sigrelse, sighold, snprintf and kill. */
+#define _XOPEN_SOURCE 500
+
+#include <unistd.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <signal.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#include "colors.h"
 #include "prompt.h"
 #include "parse.h"
 #include "signals.h"
 #include "exec.h"
+#include "commands/pwd.h"
+#include "commands/cd.h"
+#include "commands/checkEnv.h"
 
 #define INP_LEN 256
 
 void interpret(int, char **, char *, size_t);
-void get_line(char *, size_t);
-
-void get_input(char *input, size_t size) {
-	int i;
-	char c;
-	char *start = input;
-	for (i = 0; i < (int)size; i++) {
-		/* Read input. */
-		c = getc(stdin);
-		/* -1 == EOF */
-		if (c == -1) {
-			/* Quit chell if no command is inputted. */
-			if (strlen(start) == 0) {
-				kill(0, SIGQUIT);
-				exit(0);
-			}
-			/* Otherwise ignore this. */
-			continue;
-		}
-		/* Add input to buffer. */
-		*input++ = c;
-		if (c == '\n') {
-			break;
-		}
-	}
-}
 
 int main(int argc, char const *argv[]) {
 	/* Whole input line. */
